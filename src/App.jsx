@@ -282,6 +282,18 @@ function App() {
           </div>
         </header>
 
+        <nav className="mobile-nav" aria-label="التنقل الرئيسي">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.id} className={activeTab === item.id ? "nav-item active" : "nav-item"} onClick={() => setActiveTab(item.id)}>
+                <Icon size={17} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         <div className="content-wrap">
           {notice && <div className="notice"><span>{notice}</span><button onClick={() => setNotice("")}>إغلاق</button></div>}
           {activeTab === "overview" && (
