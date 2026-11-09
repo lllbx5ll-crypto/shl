@@ -71,12 +71,18 @@ function requireUser(req, res, next) {
 }
 
 async function getInstalledModels() {
-  const response = await fetch(OLLAMA_BASE_URL + "/api/tags", {
-    signal: AbortSignal.timeout(5000)
-  });
-  if (!response.ok) throw new Error("تعذّر الاتصال بمحرك Ollama.");
-  const data = await response.json();
-  return Array.isArray(data.models) ? data.models.map((model) => model.name) : [];
+  try {
+    const response = await fetch(OLLAMA_BASE_URL + "/api/tags", {
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) throw new Error("تعذّر الاتصال بمحرك Ollama.");
+    const data = await response.json();
+    return Array.isArray(data.models) ? data.models.map((model) => model.name) : [];
+  } catch {
+    const error = new Error("محرك Ollama غير متصل. شغّله على الجهاز أو الخادم أولاً.");
+    error.status = 503;
+    throw error;
+  }
 }
 
 async function chooseModel(requestedModel) {
