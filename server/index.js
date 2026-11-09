@@ -49,7 +49,9 @@ app.use("/api/", rateLimit({
 
 function requireUser(req, res, next) {
   if (!firebaseAdminAuth) {
-    if (!isProduction && process.env.ALLOW_LOCAL_DEV_WITHOUT_ADMIN === "true") {
+    const remoteAddress = req.ip || req.socket?.remoteAddress || "";
+    const isLoopback = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remoteAddress);
+    if (!isProduction && isLoopback && process.env.ALLOW_LOCAL_DEV_WITHOUT_ADMIN === "true") {
       req.user = { uid: "local-developer", localDevelopment: true };
       return next();
     }
@@ -207,6 +209,18 @@ app.post("/api/ai/build", requireUser, async (req, res) => {
     const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
     if (!prompt) return res.status(400).json({ error: "اكتب وصف الموقع أولاً." });
     if (prompt.length > 6000) return res.status(400).json({ error: "وصف الموقع أطول من الحد المسموح." });
+
+    const existingFiles = req.body?.existingFiles;
+    if (existingFiles !== undefined && existingFiles !== null) {
+      if (typeof existingFiles !== "object" || Array.isArray(existingFiles)) {
+        return res.status(400).json({ error: "ملفات المشروع الحالي غير صالحة." });
+      }
+      for (const fileName of ["index.html", "styles.css", "script.js"]) {
+        if (typeof existingFiles[fileName] !== "string" || existingFiles[fileName].length > 100000) {
+          return res.status(400).json({ error: "ملفات المشروع الحالي غير مكتملة أو كبيرة جداً." });
+        }
+      }
+    }
 
     const model = await chooseModel(req.body?.model);
     const schema = {
