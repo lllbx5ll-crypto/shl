@@ -1,4 +1,4 @@
-import { enforceUserRateLimit, jsonError, requireFirebaseUser, RequestError } from "../../../_shared/auth.js";
+import { enforceUserRateLimit, jsonError, requireFirebaseUser, RequestError } from "../../_shared/auth.js";
 
 const MODEL = "@cf/qwen/qwen2.5-coder-32b-instruct";
 

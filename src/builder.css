@@ -17,6 +17,7 @@
 .ai-panel-title strong { font-size: 13px; }
 .ai-panel-title small { color: #858aa6; font-size: 10px; margin-top: 3px; }
 .model-picker { display: flex; align-items: center; gap: 5px; color: #a9a2ce; padding: 7px 9px; border: 1px solid #393452; border-radius: 9px; background: #17182b; }
+.cloud-model-label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #393452; border-radius: 9px; color: #c8b8f2; background: #17182b; font-size: 10px; white-space: nowrap; }
 .model-picker select { max-width: 145px; min-width: 0; color: #dcd9ec; background: transparent; border: 0; outline: 0; font-size: 10px; }
 .model-picker option { color: #17182b; }
 .engine-warning { display: flex; align-items: flex-start; gap: 9px; margin: 12px 13px 0; padding: 10px 11px; border: 1px solid #72552c; border-radius: 10px; color: #e7bd80; background: #342819; }
