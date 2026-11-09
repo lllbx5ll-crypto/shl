@@ -96,3 +96,5 @@
   .ai-send-button, .ai-build-button { flex: 1; }
   .ai-save-status { align-items: flex-start; flex-direction: column; }
 }
+
+.browser-mode-note { margin:12px 13px 0; padding:10px 12px; border-radius:11px; border:1px solid #554675; background:#241e3a; color:#d0c0ee; font-size:11px; line-height:1.8; }
