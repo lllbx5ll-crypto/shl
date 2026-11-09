@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, browserLocalPersistence, GoogleAuthProvider, getAuth } from "firebase/auth";
+import { initializeAuth, browserLocalPersistence, browserPopupRedirectResolver, GoogleAuthProvider, getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // إعدادات تطبيق الويب من مشروع Firebase: zyqmora-ai.
@@ -22,7 +22,12 @@ const app = initializeApp(firebaseConfig);
 // transient user gesture and cause the Google popup to be blocked.
 let auth;
 try {
-  auth = initializeAuth(app, { persistence: browserLocalPersistence });
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+    // Required for signInWithPopup/signInWithRedirect when using initializeAuth.
+    // Without this resolver, Firebase can throw auth/argument-error.
+    popupRedirectResolver: browserPopupRedirectResolver
+  });
 } catch (error) {
   if (error?.code === "auth/already-initialized") {
     auth = getAuth(app);
