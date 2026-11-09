@@ -38,7 +38,7 @@ import {
   WandSparkles
 } from "lucide-react";
 import { auth, db, googleProvider } from "./firebase.js";
-import Builder from "./Builder.jsx";
+import BrowserBuilder from "./BrowserBuilder.jsx";
 
 const brand = "ZYQMORA AI";
 
@@ -332,7 +332,7 @@ function App() {
             </>
           )}
 
-          {activeTab === "builder" && <Builder user={user} />}
+          {activeTab === "builder" && <BrowserBuilder user={user} />}
 
           {activeTab === "projects" && (
             <section className="page-section">
