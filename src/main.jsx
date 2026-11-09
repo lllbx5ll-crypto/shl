@@ -8,7 +8,12 @@ import "./styles.css";
 // The link opens this path directly; Firebase Hosting sends index.html here.
 const segments = window.location.pathname.split("/").filter(Boolean);
 const isPublicSite = segments.length === 2 && segments[0] === "s";
-const siteId = isPublicSite ? decodeURIComponent(segments[1]) : "";
+let siteId = "";
+try {
+  siteId = isPublicSite ? decodeURIComponent(segments[1]) : "";
+} catch {
+  siteId = "";
+}
 const validSiteId = /^[A-Za-z0-9_-]{5,200}$/.test(siteId);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
