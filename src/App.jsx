@@ -353,7 +353,7 @@ function App() {
             <div className="project-status"><span className="status-dot" /> مسودة خاصة</div>
             <p className="prompt-preview">{selectedProject.prompt}</p>
             <div className="modal-meta">أُنشئ في {readableDate(selectedProject.createdAt)}</div>
-            <div className="honest-note"><CircleHelp size={16} /> لم يتم توليد ملفات الموقع بعد؛ محرك الذكاء الاصطناعي لم يُربط حتى الآن.</div>
+            <div className="honest-note"><CircleHelp size={16} /> {selectedProject.generatedFiles ? "هذا المشروع يحتوي على ملفات HTML وCSS وJavaScript مولّدة ومحفوظة في قاعدة البيانات." : "هذه مسودة وصف فقط. افتح مساحة الذكاء الاصطناعي لإنشاء ملفات الموقع ومعاينتها."}</div>
             <button className="danger-button" onClick={() => removeProject(selectedProject)}><Trash2 size={16} /> حذف المشروع</button>
           </section>
         </div>
