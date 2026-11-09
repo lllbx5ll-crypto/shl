@@ -365,6 +365,7 @@ function App() {
             <div className="project-status"><span className="status-dot" /> مسودة خاصة</div>
             <p className="prompt-preview">{selectedProject.prompt}</p>
             <div className="modal-meta">أُنشئ في {readableDate(selectedProject.createdAt)}</div>
+            {selectedProject.publishedSiteId && <a className="public-project-detail-link" href={"/s/" + encodeURIComponent(selectedProject.publishedSiteId)} target="_blank" rel="noopener noreferrer">افتح رابط الموقع المنشور ↗</a>}
             <div className="honest-note"><CircleHelp size={16} /> {selectedProject.generatedFiles ? "هذا المشروع يحتوي على ملفات HTML وCSS وJavaScript مولّدة ومحفوظة في قاعدة البيانات." : "هذه مسودة وصف فقط. افتح مساحة الذكاء الاصطناعي لإنشاء ملفات الموقع ومعاينتها."}</div>
             <button className="danger-button" onClick={() => removeProject(selectedProject)}><Trash2 size={16} /> حذف المشروع</button>
           </section>
@@ -391,6 +392,7 @@ function ProjectList({ projects, loading, error, onOpen, onDelete, onAll }) {
                 <p>{project.prompt}</p>
                 <div className="project-date">{readableDate(project.createdAt)}</div>
               </button>
+              {project.publishedSiteId && <a className="published-project-link" href={"/s/" + encodeURIComponent(project.publishedSiteId)} target="_blank" rel="noopener noreferrer">فتح الموقع المنشور ↗</a>}
               <button className="delete-project" title="حذف المشروع" onClick={() => onDelete(project)}><Trash2 size={16} /></button>
             </article>
           ))}
