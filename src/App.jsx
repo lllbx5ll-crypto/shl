@@ -38,6 +38,7 @@ import {
   WandSparkles
 } from "lucide-react";
 import { auth, db, googleProvider } from "./firebase.js";
+import Builder from "./Builder.jsx";
 
 const brand = "ZYQMORA AI";
 
@@ -240,6 +241,7 @@ function App() {
 
   const navItems = [
     { id: "overview", label: "الرئيسية", icon: LayoutDashboard },
+    { id: "builder", label: "الذكاء الاصطناعي", icon: Bot },
     { id: "projects", label: "مشاريعي", icon: FolderKanban },
     { id: "settings", label: "الحساب", icon: Settings2 }
   ];
@@ -317,6 +319,8 @@ function App() {
               <ProjectList projects={projects.slice(0, 3)} loading={projectsLoading} error={projectsError} onOpen={setSelectedProject} onDelete={removeProject} onAll={() => setActiveTab("projects")} />
             </>
           )}
+
+          {activeTab === "builder" && <Builder user={user} />}
 
           {activeTab === "projects" && (
             <section className="page-section">
