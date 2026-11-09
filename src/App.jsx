@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { auth, db, googleProvider } from "./firebase.js";
 import BrowserBuilder from "./BrowserBuilder.jsx";
+import brandLogo from "../branding/logo.svg";
 
 const brand = "ZYQMORA AI";
 
@@ -58,7 +59,7 @@ function LoginScreen({ onLogin, busy, error }) {
       <div className="login-glow login-glow-one" />
       <div className="login-glow login-glow-two" />
       <section className="login-card">
-        <img className="login-logo" src="/branding/logo.svg" alt={brand} />
+        <img className="login-logo" src={brandLogo} alt={brand} />
         <div className="eyebrow"><Sparkles size={15} /> مساحة الإبداع تبدأ من هنا</div>
         <h1>حوّل فكرتك إلى <span>مشروع رقمي</span></h1>
         <p className="login-copy">
@@ -303,7 +304,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <a className="brand-lockup" href="#home" onClick={() => setActiveTab("overview")}>
-          <img src="/branding/logo.svg" alt={brand} />
+          <img src={brandLogo} alt={brand} />
         </a>
         <div className="workspace-label">مساحة العمل</div>
         <nav className="side-nav">
@@ -326,7 +327,7 @@ function App() {
 
       <main className="main-area">
         <header className="topbar">
-          <div className="mobile-brand"><img src="/branding/logo.svg" alt={brand} /></div>
+          <div className="mobile-brand"><img src={brandLogo} alt={brand} /></div>
           <div className="topbar-right"><span className="topbar-caption">مساحة إنشاء المواقع</span><span className="plan-pill">الخطة التجريبية</span></div>
           <div className="user-menu">
             {user.photoURL ? <img className="avatar" src={user.photoURL} alt="" /> : <div className="avatar avatar-fallback">{(user.displayName || user.email || "U").slice(0, 1)}</div>}
