@@ -397,7 +397,7 @@ function App() {
                 <button className="danger-button" onClick={() => unpublishProject(selectedProject)}>إيقاف النشر</button>
               </div>
             )}
-            <div className="honest-note"><CircleHelp size={16} /> {selectedProject.generatedFiles ? "هذا المشروع يحتوي على ملفات HTML وCSS وJavaScript مولّدة ومحفوظة في قاعدة البيانات." : "هذه مسودة وصف فقط. افتح مساحة الذكاء الاصطناعي لإنشاء ملفات الموقع ومعاينتها."}</div>
+            <div className="honest-note"><CircleHelp size={16} /> {selectedProject.generatedFiles ? "هذا الموقع محفوظ في حسابك. إذا وافقت على نشره، يستطيع أي شخص فتح رابط الموقع المنشور مباشرة من متصفحه." : "هذه مسودة وصف فقط. افتح مساحة الذكاء الاصطناعي لإنشاء ملفات الموقع ومعاينتها."}</div>
             <button className="danger-button" onClick={() => removeProject(selectedProject)}><Trash2 size={16} /> حذف المشروع</button>
           </section>
         </div>
