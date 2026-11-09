@@ -1,24 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
-import {
-  BROWSER_MODELS,
-  browserAICapable,
-  browserChat,
-  browserBuildWebsite,
-  buildFreeTemplate
-} from "./browserAI.js";
+import { buildFreeTemplate } from "./browserAI.js";
 import { renderSiteDocument } from "./sitePreview.js";
 import "./builder.css";
 
 
+async function requestCloudAI(user, endpoint, payload) {
+  if (!user?.getIdToken) throw new Error("انتهت جلسة الدخول. سجّل الدخول مجدداً.");
+  const token = await user.getIdToken();
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "تعذّر الاتصال بمحرك الذكاء الاصطناعي السحابي.");
+  }
+  return data;
+}
+
 export default function BrowserBuilder({ user }) {
-  const [webgpu, setWebgpu] = useState(false);
-  const [model, setModel] = useState(BROWSER_MODELS[0].id);
   const [messages, setMessages] = useState([{
     role: "assistant",
-    content: "أهلاً بك! يمكنك إنشاء قالب موقع مجاني فوراً على أي جهاز. ولتجربة الذكاء الاصطناعي نفسه، يلزم متصفح يدعم WebGPU وتنزيل نموذج صغير أول مرة."
+    content: "أهلاً بك! أنا ZYQMORA AI. أعمل على خوادم Cloudflare؛ لا تحتاج إلى تنزيل نموذج أو تشغيل WebGPU على جهازك."
   }]);
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -34,7 +44,6 @@ export default function BrowserBuilder({ user }) {
   const [publishing, setPublishing] = useState(false);
   const publishedUrl = publishedId ? window.location.origin + "/s/" + publishedId : "";
 
-  useEffect(() => setWebgpu(browserAICapable()), []);
   const preview = useMemo(() => renderSiteDocument(files), [files]);
 
   async function saveFiles(result, prompt) {
@@ -82,12 +91,10 @@ export default function BrowserBuilder({ user }) {
       if (type === "template") {
         result = buildFreeTemplate(prompt);
       } else {
-        if (!webgpu) throw new Error("هذا الجهاز لا يدعم WebGPU؛ استخدم زر القالب الفوري المجاني.");
-        result = await browserBuildWebsite({
-          model,
+        setProgress("إرسال الطلب إلى الذكاء الاصطناعي السحابي...");
+        result = await requestCloudAI(user, "/api/ai/build", {
           prompt,
-          existingFiles: files || undefined,
-          onProgress: setProgress
+          existingFiles: files || undefined
         });
       }
       setFiles(result.files);
@@ -107,7 +114,7 @@ export default function BrowserBuilder({ user }) {
 
   async function sendChat() {
     const text = input.trim();
-    if (!text || busy || !webgpu) return;
+    if (!text || busy) return;
     const next = [...messages, { role: "user", content: text }];
     setMessages(next);
     setInput("");
@@ -115,10 +122,9 @@ export default function BrowserBuilder({ user }) {
     setError("");
     setProgress("");
     try {
-      const result = await browserChat({
-        model,
-        messages: next,
-        onProgress: setProgress
+      setProgress("يتصل بمحرك ZYQMORA AI السحابي...");
+      const result = await requestCloudAI(user, "/api/ai/chat", {
+        messages: next
       });
       setMessages((current) => [...current, { role: "assistant", content: result.content }]);
     } catch (err) {
@@ -215,11 +221,11 @@ export default function BrowserBuilder({ user }) {
         <div>
           <div className="eyebrow"><Sparkles size={15} /> مجاني بلا مفاتيح API</div>
           <h1>ابنِ موقعك مع ZYQMORA AI</h1>
-          <p>قالب فوري لأي جهاز، أو ذكاء اصطناعي تجريبي يعمل داخل المتصفح نفسه.</p>
+          <p>ذكاء اصطناعي سحابي يعمل على خوادم Cloudflare، دون تنزيل نماذج على جهازك.</p>
         </div>
-        <div className={webgpu ? "engine-indicator is-online" : "engine-indicator is-offline"}>
+        <div className="engine-indicator is-online">
           <span className="engine-indicator-dot" />
-          <span>{webgpu ? "WebGPU متاح" : "WebGPU غير متاح"}</span>
+          <span>ذكاء سحابي جاهز</span>
         </div>
       </header>
       <div className="ai-builder-grid">
@@ -229,23 +235,11 @@ export default function BrowserBuilder({ user }) {
               <div className="ai-panel-icon"><Bot size={19}/></div>
               <div><strong>دردشة وإنشاء المواقع</strong><small>بدون Puter أو API مدفوع</small></div>
             </div>
-            <label className="model-picker">
-              <Cpu size={16}/>
-              <select aria-label="اختر نموذج الذكاء الاصطناعي" value={model} onChange={(event) => setModel(event.target.value)} disabled={busy}>
-                {BROWSER_MODELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-              </select>
-            </label>
+            <span className="cloud-model-label"><Cpu size={15}/> Qwen Coder • Cloudflare</span>
           </div>
           <div className="browser-mode-note">
-            النموذج يُنزّل إلى جهاز الزائر عند أول استخدام، وقد يستهلك مئات الميجابايت أو أكثر.
-            الجودة محدودة ولا يعمل على كل الهواتف. القالب الفوري لا يحتاج نموذجاً ولا تنزيله.
+            يعمل نموذج الذكاء الاصطناعي على خوادم Cloudflare؛ لا يتم تنزيل أوزان النموذج إلى جوال المستخدم أو حاسوبه. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
           </div>
-          {!webgpu && (
-            <div className="engine-warning">
-              <CircleAlert size={17}/>
-              <div><strong>الذكاء المحلي غير مدعوم على هذا الجهاز</strong><span>زر «قالب فوري مجاني» يعمل بدونه.</span></div>
-            </div>
-          )}
           <div className="ai-message-list">
             {messages.map((message, i) => (
               <article key={i} className={"ai-message " + (message.role === "user" ? "from-user" : "from-ai")}>
@@ -265,8 +259,8 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-compose-actions">
               <span>{input.length}/6000</span>
               <div>
-                <button type="button" className="ai-send-button" onClick={sendChat} disabled={busy || !input.trim() || !webgpu}><Send size={15}/> دردشة AI</button>
-                <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim() || !webgpu}><WandSparkles size={15}/> إنشاء بالذكاء</button>
+                <button type="button" className="ai-send-button" onClick={sendChat} disabled={busy || !input.trim()}><Send size={15}/> دردشة AI</button>
+                <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim()}><WandSparkles size={15}/> إنشاء بالذكاء</button>
                 <button type="button" className="ai-send-button" onClick={() => generate("template")} disabled={busy || !input.trim()}><Code2 size={15}/> قالب فوري مجاني</button>
               </div>
             </div>
@@ -307,14 +301,14 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-preview-empty">
               <div className="ai-preview-empty-icon"><Code2 size={31}/></div>
               <strong>مساحة موقعك الجديد</strong>
-              <p>اكتب طلبك ثم اضغط «قالب فوري مجاني» لنتيجة سريعة على أي جهاز، أو «إنشاء بالذكاء» إن كان WebGPU متاحاً.</p>
+              <p>اكتب وصف موقعك واضغط «إنشاء بالذكاء» ليبنيه النموذج السحابي دون تنزيل على جهازك، أو استخدم القالب الفوري.</p>
             </div>
           )}
         </section>
       </div>
       <div className="ai-builder-footnote">
         <CircleAlert size={15}/>
-        <span>المستخدم يعاين الموقع أولاً ثم يوافق على نشره برابط عام. القوالب الفورية مبرمجة، والذكاء المحلي يتطلب قدرة جهاز الزائر. روابط النشر تحتاج Firebase Hosting وقواعد Firestore المحدثة، ولا نضمن تشغيل الذكاء على كل الأجهزة.</span>
+        <span>المستخدم يعاين الموقع أولاً ثم يوافق على نشره برابط عام. الذكاء يعمل على خوادم Cloudflare ولا ينزّل نموذجاً إلى جهاز الزائر. الحصة المجانية اليومية محدودة وقد تتوقف الطلبات عند بلوغها. روابط النشر تحتاج قواعد Firestore المحدثة.</span>
       </div>
     </section>
   );
