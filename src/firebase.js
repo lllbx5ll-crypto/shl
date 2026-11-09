@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { initializeAuth, browserLocalPersistence, GoogleAuthProvider, getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // إعدادات تطبيق الويب من مشروع Firebase: zyqmora-ai.
@@ -17,7 +17,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// Initialize persistence before the user taps the Google button. This avoids
+// awaiting storage setup inside the click handler, which can lose Android's
+// transient user gesture and cause the Google popup to be blocked.
+let auth;
+try {
+  auth = initializeAuth(app, { persistence: browserLocalPersistence });
+} catch (error) {
+  if (error?.code === "auth/already-initialized") {
+    auth = getAuth(app);
+  } else {
+    throw error;
+  }
+}
+export { auth };
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
