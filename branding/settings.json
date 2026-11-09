@@ -1,11 +1,12 @@
 {
-  "brandName": "Qamish Forge AI",
-  "brandNameArabic": "قامش فورج AI",
-  "developer": "القميشي",
+  "brandName": "ZYQMORA AI",
+  "brandNameArabic": "زيكمورا",
+  "developer": "Al-Qmishi",
   "contactEmail": "lllbx5ll@gmail.com",
   "showContactEmailPublicly": false,
   "whatsapp": "",
   "telegram": "",
   "logo": "/branding/logo.svg",
-  "status": "provisional"
+  "status": "provisional",
+  "tagline": "Create Beyond Limits"
 }
