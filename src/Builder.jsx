@@ -117,7 +117,6 @@ export default function Builder({ user }) {
     if (!prompt || busy) return;
     setError("");
     setSaveMessage("");
-    setSavedProjectId("");
     setInput("");
     const isRevision = Boolean(files);
     setMessages((current) => [...current, { role: "user", content: (isRevision ? "عدّل الموقع الحالي: " : "أنشئ موقعاً: ") + prompt }]);
@@ -143,6 +142,7 @@ export default function Builder({ user }) {
       try {
         if (savedProjectId) {
           await updateDoc(doc(db, "projects", savedProjectId), {
+            prompt: prompt.slice(0, 6000),
             generatedFiles: result.files,
             aiModel: result.model || selectedModel || "local-ollama",
             updatedAt: serverTimestamp()
