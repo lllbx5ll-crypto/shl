@@ -121,7 +121,6 @@ export default function Builder({ user }) {
     const isRevision = Boolean(files);
     setMessages((current) => [...current, { role: "user", content: (isRevision ? "عدّل الموقع الحالي: " : "أنشئ موقعاً: ") + prompt }]);
     setBusy(true);
-    setFiles(null);
     setActiveFile("preview");
 
     try {
