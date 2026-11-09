@@ -43,18 +43,23 @@ npm run build
 
 ## خطوات الاستضافة
 
+### Cloudflare Pages (المستودع الحالي)
+
+المشروع مرتبط بمستودع GitHub `lllbx5ll-crypto/shl` وبفرع `main`. إعدادات البناء المطلوبة:
+
+- Framework preset: Vite
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: اتركه فارغاً
+
+عند وصول commit جديد إلى `main)، يفترض أن يبدأ Cloudflare Pages عملية نشر تلقائية. تحقق من تبويب Deployments وأن commit المنشور يطابق أحدث commit في GitHub.
+
+### Firebase
+
 1. تأكد من نشر قواعد `firestore.rules` في Firebase Console.
-2. تأكد من Google في Authentication > Sign-in method، وأضف اسم نطاق الموقع المنشور في Authorized domains.
-3. انشر مجلد `dist` في Firebase Hosting بعد تنفيذ البناء، أو استخدم Firebase CLI وفق `firebase.json`.
+2. تأكد من Google في Authentication > Sign-in method، وأضف نطاق الموقع المنشور في Authorized domains.
 
-أمثلة أوامر النشر بعد تسجيل الدخول إلى Firebase CLI:
-
-```bash
-npm run build
-firebase deploy --only hosting
-```
-
-لا حاجة لخادم Ollama في النسخة الافتراضية. ومع ذلك يبقى تشغيل الموقع على استضافة فعلية إجراءً منفصلاً عن كتابة الكود في GitHub.
+لا حاجة لخادم Ollama في النسخة الافتراضية. الاستضافة والنشر عمليتان منفصلتان عن كتابة الكود في GitHub.
 
 ## المرحلة المستقبلية
 
