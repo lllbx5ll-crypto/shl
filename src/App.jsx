@@ -9,12 +9,14 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   onSnapshot,
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where
 } from "firebase/firestore";
 import {
@@ -218,16 +220,40 @@ function App() {
     }
   }
 
-  async function removeProject(project) {
-    const confirmed = window.confirm("هل تريد حذف هذا المشروع نهائياً؟");
-    if (!confirmed) return;
+  async function unpublishProject(project) {
+    if (!project.publishedSiteId) return;
+    if (!window.confirm("هل توافق على إيقاف نشر هذا الموقع؟ لن يتمكن الزوار من فتح رابطه بعد ذلك.")) return;
     try {
-      await deleteDoc(doc(db, "projects", project.id));
-      if (selectedProject?.id === project.id) setSelectedProject(null);
-      setNotice("تم حذف المشروع.");
+      await deleteDoc(doc(db, "publishedSites", project.publishedSiteId));
+      await updateDoc(doc(db, "projects", project.id), {
+        publishedSiteId: deleteField(),
+        status: "draft",
+        updatedAt: serverTimestamp()
+      });
+      setSelectedProject(null);
+      setNotice("تم إيقاف نشر الموقع. المشروع ما زال محفوظاً في حسابك.");
     } catch (err) {
       console.error(err);
-      setNotice("تعذّر حذف المشروع. تحقق من صلاحيات قاعدة البيانات.");
+      setNotice("تعذّر إيقاف النشر؛ تحقق من اتصالك وقواعد Firestore.");
+    }
+  }
+
+  async function removeProject(project) {
+    const confirmed = window.confirm(project.publishedSiteId
+      ? "هذا المشروع له رابط عام. سيتم إيقاف نشره وحذفه نهائياً. هل أنت متأكد؟"
+      : "هل تريد حذف هذا المشروع نهائياً؟");
+    if (!confirmed) return;
+    try {
+      // Revoking the public snapshot first prevents orphaned published sites.
+      if (project.publishedSiteId) {
+        await deleteDoc(doc(db, "publishedSites", project.publishedSiteId));
+      }
+      await deleteDoc(doc(db, "projects", project.id));
+      if (selectedProject?.id === project.id) setSelectedProject(null);
+      setNotice("تم حذف المشروع وإيقاف رابطه العام إن كان منشوراً.");
+    } catch (err) {
+      console.error(err);
+      setNotice("تعذّر إتمام حذف المشروع. تحقق من صلاحيات قاعدة البيانات.");
     }
   }
 
@@ -362,10 +388,15 @@ function App() {
             <button className="modal-close" onClick={() => setSelectedProject(null)}>×</button>
             <div className="eyebrow">تفاصيل المشروع</div>
             <h2>{selectedProject.name}</h2>
-            <div className="project-status"><span className="status-dot" /> مسودة خاصة</div>
+            <div className="project-status"><span className="status-dot" /> {selectedProject.publishedSiteId ? "موقع منشور برابط عام" : "مسودة خاصة"}</div>
             <p className="prompt-preview">{selectedProject.prompt}</p>
             <div className="modal-meta">أُنشئ في {readableDate(selectedProject.createdAt)}</div>
-            {selectedProject.publishedSiteId && <a className="public-project-detail-link" href={"/s/" + encodeURIComponent(selectedProject.publishedSiteId)} target="_blank" rel="noopener noreferrer">افتح رابط الموقع المنشور ↗</a>}
+            {selectedProject.publishedSiteId && (
+              <div className="public-project-actions">
+                <a className="public-project-detail-link" href={"/s/" + encodeURIComponent(selectedProject.publishedSiteId)} target="_blank" rel="noopener noreferrer">افتح رابط الموقع المنشور ↗</a>
+                <button className="danger-button" onClick={() => unpublishProject(selectedProject)}>إيقاف النشر</button>
+              </div>
+            )}
             <div className="honest-note"><CircleHelp size={16} /> {selectedProject.generatedFiles ? "هذا المشروع يحتوي على ملفات HTML وCSS وJavaScript مولّدة ومحفوظة في قاعدة البيانات." : "هذه مسودة وصف فقط. افتح مساحة الذكاء الاصطناعي لإنشاء ملفات الموقع ومعاينتها."}</div>
             <button className="danger-button" onClick={() => removeProject(selectedProject)}><Trash2 size={16} /> حذف المشروع</button>
           </section>
@@ -387,7 +418,7 @@ function ProjectList({ projects, loading, error, onOpen, onDelete, onAll }) {
           {projects.map((project) => (
             <article className="project-card" key={project.id}>
               <button className="project-open" onClick={() => onOpen(project)}>
-                <div className="project-card-top"><div className="project-file-icon"><Code2 size={20} /></div><span className="draft-pill">مسودة</span></div>
+                <div className="project-card-top"><div className="project-file-icon"><Code2 size={20} /></div><span className="draft-pill">{project.publishedSiteId ? "منشور" : "مسودة"}</span></div>
                 <h3>{project.name}</h3>
                 <p>{project.prompt}</p>
                 <div className="project-date">{readableDate(project.createdAt)}</div>
