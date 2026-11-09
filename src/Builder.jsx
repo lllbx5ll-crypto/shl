@@ -18,7 +18,7 @@ const starterMessage = {
 function makePreview(files) {
   if (!files?.["index.html"]) return "";
   let html = files["index.html"];
-  const css = (files["styles.css"] || "").replace(/<\\/style/gi, "<\\\\/style");
+  const css = files["styles.css"] || "";
   const js = (files["script.js"] || "").replace(/<\/script/gi, "<\\/script");
   const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: https:; style-src \'unsafe-inline\' https:; font-src data: https:; script-src \'unsafe-inline\'; connect-src \'none\'; form-action \'none\'; base-uri \'none\'">';
   if (/<head[^>]*>/i.test(html)) {
