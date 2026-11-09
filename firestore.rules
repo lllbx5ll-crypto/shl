@@ -71,7 +71,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.keys().hasOnly([
           'ownerUid', 'name', 'prompt', 'status', 'framework',
-          'visibility', 'createdAt', 'updatedAt'
+          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel'
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
