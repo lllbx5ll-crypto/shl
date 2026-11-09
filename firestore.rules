@@ -39,7 +39,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
           'ownerUid', 'name', 'prompt', 'status', 'framework',
-          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel'
+          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel', 'publishedSiteId'
         ])
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.name is string
@@ -53,6 +53,9 @@ service cloud.firestore {
         && request.resource.data.visibility == 'private'
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp
+        && (!('publishedSiteId' in request.resource.data)
+            || (request.resource.data.publishedSiteId is string
+              && request.resource.data.publishedSiteId == request.auth.uid + '_' + projectId))
         && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
         && (!('generatedFiles' in request.resource.data) || (
           request.resource.data.generatedFiles is map
@@ -71,13 +74,16 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.keys().hasOnly([
           'ownerUid', 'name', 'prompt', 'status', 'framework',
-          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel'
+          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel', 'publishedSiteId'
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 80
         && request.resource.data.prompt is string
         && request.resource.data.prompt.size() <= 6000
+        && (!('publishedSiteId' in request.resource.data)
+            || (request.resource.data.publishedSiteId is string
+              && request.resource.data.publishedSiteId == request.auth.uid + '_' + projectId))
         && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
         && (!('generatedFiles' in request.resource.data) || (
           request.resource.data.generatedFiles is map
@@ -90,6 +96,58 @@ service cloud.firestore {
           && request.resource.data.generatedFiles['script.js'] is string
           && request.resource.data.generatedFiles['script.js'].size() <= 100000
         ));
+    }
+
+    // Public website snapshots are readable ONLY when the owner publishes them.
+    // Their ids are deterministically scoped to the Firebase UID and project id.
+    match /publishedSites/{siteId} {
+      function validWebsite(data) {
+        return data.keys().hasOnly([
+            'ownerUid', 'projectId', 'name', 'status', 'files', 'createdAt', 'updatedAt'
+          ])
+          && data.ownerUid is string
+          && data.projectId is string
+          && data.name is string
+          && data.name.size() > 0
+          && data.name.size() <= 80
+          && data.status == 'published'
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp
+          && data.files is map
+          && data.files.keys().hasAll(['index.html', 'styles.css', 'script.js'])
+          && data.files.keys().hasOnly(['index.html', 'styles.css', 'script.js'])
+          && data.files['index.html'] is string
+          && data.files['index.html'].size() > 0
+          && data.files['index.html'].size() <= 100000
+          && data.files['styles.css'] is string
+          && data.files['styles.css'].size() <= 100000
+          && data.files['script.js'] is string
+          && data.files['script.js'].size() <= 100000;
+      }
+
+      function publishOwnProject(data) {
+        return signedIn()
+          && data.ownerUid == request.auth.uid
+          && siteId == request.auth.uid + '_' + data.projectId
+          && get(/databases/$(database)/documents/projects/$(data.projectId)).data.ownerUid == request.auth.uid;
+      }
+
+      allow get: if resource.data.status == 'published';
+      allow list: if false;
+
+      allow create: if validWebsite(request.resource.data)
+        && publishOwnProject(request.resource.data);
+
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.projectId == resource.data.projectId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validWebsite(request.resource.data)
+        && publishOwnProject(request.resource.data);
+
+      allow delete: if signedIn()
+        && resource.data.ownerUid == request.auth.uid;
     }
 
     // Deny access to every collection not explicitly listed above.
