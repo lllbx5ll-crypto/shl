@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { Bot, Check, CircleAlert, Code2, Copy, Cpu, Eye, Link as LinkIcon, LoaderCircle, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
+import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
 import {
   BROWSER_MODELS,
@@ -24,7 +24,7 @@ export default function BrowserBuilder({ user }) {
   const [projectName, setProjectName] = useState("");
   const [files, setFiles] = useState(null);
   const [projectId, setProjectId] = useState("");
-  const [activeTab, setActiveTab] = useState("preview");
+
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -76,7 +76,7 @@ export default function BrowserBuilder({ user }) {
     setNotice("");
     setProgress("");
     setBusy(true);
-    setActiveTab("preview");
+
     try {
       let result;
       if (type === "template") {
@@ -209,15 +209,6 @@ export default function BrowserBuilder({ user }) {
     }
   }
 
-  async function copyFile() {
-    try {
-      await navigator.clipboard.writeText(files?.[activeTab] || "");
-      setNotice("تم نسخ الكود.");
-    } catch {
-      setNotice("لم يسمح المتصفح بالنسخ. يمكنك تحديد النص ونسخه يدوياً.");
-    }
-  }
-
   return (
     <section className="ai-builder">
       <header className="ai-builder-heading">
@@ -284,23 +275,15 @@ export default function BrowserBuilder({ user }) {
 
         <section className="ai-preview-card">
           <div className="ai-preview-header">
-            <div><strong><Eye size={17}/> معاينة الموقع</strong><small>{files ? "ملفات HTML وCSS وJavaScript" : "لم يتم إنشاء موقع بعد"}</small></div>
+            <div><strong><Eye size={17}/> معاينة الموقع</strong><small>{files ? "معاينة الموقع النهائي" : "لم يتم إنشاء موقع بعد"}</small></div>
             {files && <div className="ai-preview-header-actions">
               {saved && <span className="ai-generated-badge"><Check size={13}/> محفوظ</span>}
-              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setActiveTab("preview");setProjectName("");}}>مشروع جديد</button>
+              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setProjectName("");}}>مشروع جديد</button>
             </div>}
           </div>
           {files ? (
             <>
-              <div className="ai-file-tabs">
-                {["preview","index.html","styles.css","script.js"].map((tab) => (
-                  <button key={tab} className={activeTab === tab ? "selected" : ""} onClick={() => setActiveTab(tab)}>{tab === "preview" ? "معاينة" : tab}</button>
-                ))}
-                {activeTab !== "preview" && <button className="copy-code-button" onClick={copyFile}><Copy size={14}/> نسخ</button>}
-              </div>
-              {activeTab === "preview"
-                ? <iframe className="ai-live-preview" title="معاينة آمنة للموقع" sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={preview}/>
-                : <pre className="ai-code-view"><code>{files[activeTab] || ""}</code></pre>}
+              <iframe className="ai-live-preview" title="معاينة آمنة للموقع" sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={preview}/>
               <div className="publish-actions">
                 <div className="publish-help">
                   <strong>الخطوة الأخيرة: الموافقة والنشر</strong>
