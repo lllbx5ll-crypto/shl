@@ -4,7 +4,7 @@ import {
   MessageSquare, RefreshCw, Save, Send, Sparkles, WandSparkles
 } from "lucide-react";
 import {
-  addDoc, collection, serverTimestamp
+  addDoc, collection, doc, serverTimestamp, updateDoc
 } from "firebase/firestore";
 import { auth, db } from "./firebase.js";
 import { aiRequest } from "./aiClient.js";
@@ -119,7 +119,8 @@ export default function Builder({ user }) {
     setSaveMessage("");
     setSavedProjectId("");
     setInput("");
-    setMessages((current) => [...current, { role: "user", content: "أنشئ موقعاً: " + prompt }]);
+    const isRevision = Boolean(files);
+    setMessages((current) => [...current, { role: "user", content: (isRevision ? "عدّل الموقع الحالي: " : "أنشئ موقعاً: ") + prompt }]);
     setBusy(true);
     setFiles(null);
     setActiveFile("preview");
@@ -129,7 +130,7 @@ export default function Builder({ user }) {
       const result = await aiRequest("/api/ai/build", {
         method: "POST",
         token,
-        body: { prompt, model: selectedModel || undefined }
+        body: { prompt, model: selectedModel || undefined, existingFiles: files || undefined }
       });
 
       setFiles(result.files);
@@ -140,20 +141,29 @@ export default function Builder({ user }) {
       }]);
 
       try {
-        const saved = await addDoc(collection(db, "projects"), {
-          ownerUid: user.uid,
-          name: (projectName.trim() || prompt.slice(0, 55) || "مشروع جديد").slice(0, 80),
-          prompt: prompt.slice(0, 6000),
-          status: "draft",
-          framework: "html",
-          visibility: "private",
-          generatedFiles: result.files,
-          aiModel: result.model || selectedModel || "local-ollama",
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        setSavedProjectId(saved.id);
-        setSaveMessage("تم حفظ المشروع وملفاته في Firestore.");
+        if (savedProjectId) {
+          await updateDoc(doc(db, "projects", savedProjectId), {
+            generatedFiles: result.files,
+            aiModel: result.model || selectedModel || "local-ollama",
+            updatedAt: serverTimestamp()
+          });
+          setSaveMessage("تم تحديث ملفات المشروع في Firestore.");
+        } else {
+          const saved = await addDoc(collection(db, "projects"), {
+            ownerUid: user.uid,
+            name: (projectName.trim() || prompt.slice(0, 55) || "مشروع جديد").slice(0, 80),
+            prompt: prompt.slice(0, 6000),
+            status: "draft",
+            framework: "html",
+            visibility: "private",
+            generatedFiles: result.files,
+            aiModel: result.model || selectedModel || "local-ollama",
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          setSavedProjectId(saved.id);
+          setSaveMessage("تم حفظ المشروع وملفاته في Firestore.");
+        }
       } catch (saveError) {
         console.error("Could not save generated project:", saveError);
         setSaveMessage("تم إنشاء الموقع ومعاينته، لكن تعذّر حفظه في Firestore. انشر قواعد Firestore المحدّثة ثم أعد الحفظ.");
@@ -256,7 +266,7 @@ export default function Builder({ user }) {
         <section className="ai-preview-card">
           <div className="ai-preview-header">
             <div><strong><Eye size={17} /> مساحة المعاينة</strong><small>{files ? "مشروعك المولّد" : "ستظهر النتيجة هنا بعد الإنشاء"}</small></div>
-            {files && <span className="ai-generated-badge"><Check size={13} /> تم التوليد</span>}
+            {files && <div className="ai-preview-header-actions"><span className="ai-generated-badge"><Check size={13} /> تم التوليد</span><button type="button" onClick={() => { setFiles(null); setSavedProjectId(""); setSaveMessage(""); setSummary(""); setProjectName(""); setActiveFile("preview"); }}>مشروع جديد</button></div>}
           </div>
 
           {files ? (
