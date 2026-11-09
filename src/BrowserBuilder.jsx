@@ -28,7 +28,7 @@ async function requestCloudAI(user, endpoint, payload) {
 export default function BrowserBuilder({ user }) {
   const [messages, setMessages] = useState([{
     role: "assistant",
-    content: "أهلاً بك! أنا ZYQMORA AI. أعمل على خوادم Cloudflare؛ لا تحتاج إلى تنزيل نموذج أو تشغيل WebGPU على جهازك."
+    content: "أهلاً بك! أنا ZYQMORA AI. أعمل على خوادم Cloudflare؛ لا تحتاج إلى تنزيل أي نموذج على جهازك."
   }]);
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
