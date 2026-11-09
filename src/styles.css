@@ -202,3 +202,9 @@ a { color: inherit; text-decoration: none; }
   }
   .mobile-nav .nav-chevron { display: none; }
 }
+
+/* Public website links stay separate from project edit buttons. */
+.published-project-link { display: inline-block; margin: 0 14px 17px 50px; color: #b5efff; font-size: 11px; text-decoration: underline; }
+.public-project-detail-link { display: inline-flex; margin: 12px 0; font-size: 13px; color: #b5efff; text-decoration: underline; }
+.public-project-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.public-project-actions .danger-button { margin-top: 0; }
