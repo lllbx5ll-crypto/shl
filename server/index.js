@@ -134,11 +134,12 @@ app.get("/api/health", async (_req, res) => {
   try {
     const models = await getInstalledModels();
     res.json({
-      ok: true,
+      ok: models.length > 0,
       engine: "Ollama local",
       model: DEFAULT_MODEL,
       installedModels: models,
-      authReady: Boolean(firebaseAdminAuth) || (!isProduction && process.env.ALLOW_LOCAL_DEV_WITHOUT_ADMIN === "true")
+      authReady: Boolean(firebaseAdminAuth) || (!isProduction && process.env.ALLOW_LOCAL_DEV_WITHOUT_ADMIN === "true"),
+      error: models.length ? "" : "Ollama متصل، لكن لم يتم تنزيل نموذج. نفّذ: ollama pull qwen2.5-coder:7b"
     });
   } catch {
     res.status(503).json({
