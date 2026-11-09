@@ -55,6 +55,8 @@
 .ai-preview-header strong { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .ai-preview-header strong svg { color: #c4a9ff; }
 .ai-preview-header small { color: #858aa6; font-size: 10px; }
+.ai-preview-header-actions { display: flex; align-items: center; gap: 8px; }
+.ai-preview-header-actions button { padding: 6px 9px; color: #cdbbff; border: 1px solid #554675; border-radius: 8px; background: #211b35; font-size: 10px; }
 .ai-generated-badge { display: inline-flex; align-items: center; gap: 5px; color: #83e5b6; background: #15392d; border: 1px solid #2a6b50; border-radius: 999px; padding: 5px 8px; font-size: 10px; }
 .ai-file-tabs { display: flex; align-items: center; gap: 5px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: #101224; }
 .ai-file-tabs button { min-height: 32px; display: inline-flex; align-items: center; gap: 5px; padding: 0 10px; color: #9da1bb; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 10px; }
