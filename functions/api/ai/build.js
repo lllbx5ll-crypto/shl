@@ -8,6 +8,7 @@ const DESIGN_STYLES = {
   creative: "Creative studio: expressive but harmonious colors, bold typography, asymmetrical layouts, layered visual elements and confident art direction.",
   tech: "Premium technology: deep ink/navy surfaces are allowed, electric blue/violet accents, sophisticated product mockups and clean high-contrast typography."
 };
+const DESIGN_STYLE_LABELS = { premium: "الفاخر", modern: "العصري", minimal: "الهادئ", creative: "الإبداعي", tech: "التقني" };
 const FALLBACK_CSS = "*{box-sizing:border-box}body{margin:0;font-family:system-ui,Tahoma,sans-serif;line-height:1.75;background:#fbfaff;color:#24243a}a{color:inherit}main{width:min(1180px,90%);margin:auto;padding:48px 0}section{padding:34px 0}button,a{transition:all .2s ease}";
 
 function extractHtml(raw) {
@@ -88,7 +89,7 @@ export async function onRequestPost({ request, env }) {
     if (!/<script[^>]+src=["']script\.js["']/i.test(html)) html = html.replace(/<\/body>/i, '<script src="script.js"></script></body>');
 
     return Response.json({
-      summary: "اكتمل إنشاء الموقع باتجاه تصميم " + style + " باستخدام Qwen Coder على خوادم Cloudflare. لا حاجة لتنزيل نموذج على جهازك.",
+      summary: "اكتمل إنشاء الموقع بالأسلوب " + DESIGN_STYLE_LABELS[style] + " باستخدام Qwen Coder على خوادم Cloudflare. لا حاجة لتنزيل نموذج على جهازك.",
       files: { "index.html": html.slice(0,100000), "styles.css": (styles || FALLBACK_CSS).slice(0,100000), "script.js": scripts.slice(0,30000) },
       model: MODEL,
       designStyle: style

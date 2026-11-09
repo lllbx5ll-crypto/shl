@@ -250,7 +250,7 @@ export default function BrowserBuilder({ user }) {
             <span className="cloud-model-label"><Cpu size={15}/> Qwen Coder • Cloudflare</span>
           </div>
           <div className="browser-mode-note">
-            تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب الاستضافة.
+            تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
           </div>
           <div className="style-selector">
             <div className="style-selector-heading">
