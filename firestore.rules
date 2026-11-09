@@ -39,7 +39,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
           'ownerUid', 'name', 'prompt', 'status', 'framework',
-          'visibility', 'createdAt', 'updatedAt'
+          'visibility', 'createdAt', 'updatedAt', 'generatedFiles', 'aiModel'
         ])
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.name is string
@@ -52,7 +52,19 @@ service cloud.firestore {
         && request.resource.data.framework == 'html'
         && request.resource.data.visibility == 'private'
         && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+        && request.resource.data.updatedAt is timestamp
+        && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
+        && (!('generatedFiles' in request.resource.data) || (
+          request.resource.data.generatedFiles is map
+          && request.resource.data.generatedFiles.keys().hasAll(['index.html', 'styles.css', 'script.js'])
+          && request.resource.data.generatedFiles.keys().hasOnly(['index.html', 'styles.css', 'script.js'])
+          && request.resource.data.generatedFiles['index.html'] is string
+          && request.resource.data.generatedFiles['index.html'].size() <= 100000
+          && request.resource.data.generatedFiles['styles.css'] is string
+          && request.resource.data.generatedFiles['styles.css'].size() <= 100000
+          && request.resource.data.generatedFiles['script.js'] is string
+          && request.resource.data.generatedFiles['script.js'].size() <= 100000
+        ));
 
       allow update: if signedIn()
         && resource.data.ownerUid == request.auth.uid
@@ -65,7 +77,19 @@ service cloud.firestore {
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 80
         && request.resource.data.prompt is string
-        && request.resource.data.prompt.size() <= 6000;
+        && request.resource.data.prompt.size() <= 6000
+        && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
+        && (!('generatedFiles' in request.resource.data) || (
+          request.resource.data.generatedFiles is map
+          && request.resource.data.generatedFiles.keys().hasAll(['index.html', 'styles.css', 'script.js'])
+          && request.resource.data.generatedFiles.keys().hasOnly(['index.html', 'styles.css', 'script.js'])
+          && request.resource.data.generatedFiles['index.html'] is string
+          && request.resource.data.generatedFiles['index.html'].size() <= 100000
+          && request.resource.data.generatedFiles['styles.css'] is string
+          && request.resource.data.generatedFiles['styles.css'].size() <= 100000
+          && request.resource.data.generatedFiles['script.js'] is string
+          && request.resource.data.generatedFiles['script.js'].size() <= 100000
+        ));
     }
 
     // Deny access to every collection not explicitly listed above.
