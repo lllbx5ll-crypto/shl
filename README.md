@@ -87,3 +87,12 @@ npm run build
 بعد ربط المستودع بـ Cloudflare Pages، تحقق من إعداد الربط في لوحة Cloudflare: Workers & Pages → مشروع `zyqmora-ai` → Settings → Bindings → Workers AI، وتأكد أن اسم المتغير هو `AI` في بيئتي Production وPreview، ثم أعد النشر. إذا لم يظهر الربط من ملف Wrangler، أضفه من لوحة التحكم كما هو موضح في [توثيق Cloudflare Pages](https://developers.cloudflare.com/pages/functions/bindings/).
 
 النموذج موثّق في [كتالوج Cloudflare](https://developers.cloudflare.com/workers-ai/models/qwen2.5-coder-32b-instruct/). الخطة المجانية تتضمن 10,000 Neurons يومياً على مستوى الحساب، وتُعاد الحصة عند 00:00 UTC. بعد نفادها تتوقف الطلبات حتى إعادة الضبط؛ الخطة المدفوعة تحاسب الاستخدام الزائد وفق التسعير. راجع [تفاصيل الأسعار والحصة](https://developers.cloudflare.com/workers-ai/platform/pricing/).
+
+## تجربة التصميم والتوليد
+
+- واجهة فاتحة متجاوبة مع شريط تنقل سفلي ثابت على الجوال والكمبيوتر.
+- مولّد المواقع يدعم خمسة اتجاهات بصرية: فاخر، عصري، هادئ، إبداعي، وتقني.
+- المواقع الناتجة HTML/CSS/JavaScript مستقلة وتُعرض داخل معاينة معزولة قبل النشر.
+- يعمل التوليد عبر Cloudflare Workers AI؛ لا يحتاج المستخدم إلى مفتاح API خاص أو تنزيل نموذج على جهازه.
+- الحصة المجانية لدى Cloudflare محدودة وليست استخداماً غير محدود.
+
