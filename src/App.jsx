@@ -266,7 +266,7 @@ function App() {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <div className="engine-status"><span className="status-dot" /><div><strong>محرك الذكاء الاصطناعي</strong><small>بانتظار الربط</small></div></div>
+          <div className="engine-status"><span className="status-dot" /><div><strong>الذكاء المحلي بالمتصفح</strong><small>بدون API مدفوع • بحسب دعم جهاز الزائر</small></div></div>
           <div className="developer-line">Developed by <strong>Al-Qmishi</strong></div>
         </div>
       </aside>
@@ -325,7 +325,7 @@ function App() {
                   <textarea id="project-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="مثلاً: أريد موقعاً احترافياً لشركة تقنية، يحتوي على صفحة رئيسية وخدمات ومعرض أعمال ونموذج تواصل..." rows={5} maxLength={6000} />
                   <div className="form-bottom"><span>{prompt.length}/6000 حرف</span><button className="primary-button" type="submit" disabled={saving || !prompt.trim()}><Plus size={18} />{saving ? "جارٍ الحفظ..." : "حفظ المشروع"}</button></div>
                 </form>
-                <div className="honest-note"><CircleHelp size={16} /> في هذه النسخة نحفظ وصف المشروع في Firestore. سيتم تفعيل توليد الأكواد والمعاينة بعد ربط محرك النموذج.</div>
+                <div className="honest-note"><CircleHelp size={16} /> في هذه النسخة نحفظ وصف المشروع في Firestore. لتوليد موقع ومعاينته افتح تبويب «الذكاء الاصطناعي».</div>
               </section>
 
               <ProjectList projects={projects.slice(0, 3)} loading={projectsLoading} error={projectsError} onOpen={setSelectedProject} onDelete={removeProject} onAll={() => setActiveTab("projects")} />
