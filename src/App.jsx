@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   onAuthStateChanged,
-  browserLocalPersistence,
-  setPersistence,
   signInWithPopup,
   signOut
 } from "firebase/auth";
@@ -180,7 +178,6 @@ function App() {
     try {
       // Called directly by the user tapping the Google button.
       // Popup works on third-party hosting without the redirect iframe issue.
-      await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithPopup(auth, googleProvider);
       // Update the app immediately from the successful popup result instead
       // of relying only on the asynchronous auth-state observer.
