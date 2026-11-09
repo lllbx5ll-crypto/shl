@@ -98,3 +98,15 @@
 }
 
 .browser-mode-note { margin:12px 13px 0; padding:10px 12px; border-radius:11px; border:1px solid #554675; background:#241e3a; color:#d0c0ee; font-size:11px; line-height:1.8; }
+
+/* A website is private until its owner reviews it and publishes explicitly. */
+.publish-actions { display: grid; gap: 13px; padding: 18px; border-top: 1px solid var(--line); background: #131429; }
+.publish-help { display: grid; gap: 4px; }
+.publish-help strong { color: #e9e4f7; font-size: 13px; }
+.publish-help span { color: #9ea2bd; font-size: 11px; line-height: 1.8; }
+.publish-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.publish-buttons .ai-build-button, .publish-buttons .ai-send-button { min-height: 40px; }
+.published-link-result { padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; border: 1px solid #2d6953; border-radius: 12px; background: #12372b; }
+.published-link-result > span { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #a5e5c4; }
+.published-link-result a { color: #b4efff; font-family: sans-serif; font-size: 12px; max-width: 100%; overflow-wrap: anywhere; text-decoration: underline; }
+.published-link-result button { min-height: 33px; }
