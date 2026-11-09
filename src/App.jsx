@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   onAuthStateChanged,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut
 } from "firebase/auth";
 import {
@@ -67,7 +66,7 @@ function LoginScreen({ onLogin, busy, error }) {
         </p>
         <button className="google-button" onClick={onLogin} disabled={busy}>
           <span className="google-g">G</span>
-          {busy ? "جارٍ تحويلك إلى Google..." : "المتابعة باستخدام Google"}
+          {busy ? "جارٍ تسجيل الدخول..." : "المتابعة باستخدام Google"}
           <ArrowUpLeft size={18} />
         </button>
         {error && <div className="notice notice-error">{error}</div>}
@@ -94,13 +93,21 @@ function App() {
   const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-    getRedirectResult(auth).catch((err) => {
-      setError("تعذّر إكمال تسجيل الدخول: " + (err?.message || "حاول مرة أخرى."));
-    });
+    // Firebase handles persistence and notifies the UI after successful
+    // popup authentication. Avoid redirect login on third-party hosts;
+    // it can silently fail when browsers block cross-site storage.
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+        setAuthLoading(false);
+      },
+      (err) => {
+        console.error("Auth listener failed:", err);
+        setError("تعذّر التحقق من جلسة الدخول. أعد تحميل الصفحة أو افتح الموقع في Chrome.");
+        setAuthLoading(false);
+      }
+    );
     return unsubscribe;
   }, []);
 
@@ -169,10 +176,26 @@ function App() {
     setError("");
     setLoginBusy(true);
     try {
-      await signInWithRedirect(auth, googleProvider);
+      // Called directly by the user tapping the Google button.
+      // Popup works on third-party hosting without the redirect iframe issue.
+      await signInWithPopup(auth, googleProvider);
     } catch (err) {
-      console.error(err);
-      setError("تعذّر بدء تسجيل الدخول. تأكد من تفعيل Google وإضافة النطاق المصرّح به في Firebase.");
+      console.error("Google sign-in failed:", err);
+      const code = err?.code || "";
+      if (code === "auth/unauthorized-domain") {
+        setError("يجب إضافة zyqmora-ai.pages.dev إلى Firebase Authentication ← Settings ← Authorized domains ثم المحاولة مجدداً.");
+      } else if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment", "auth/web-storage-unsupported"].includes(code)) {
+        setError("متصفح التطبيق يمنع تسجيل Google. افتح https://zyqmora-ai.pages.dev مباشرة في Google Chrome أو اسمح بالنوافذ المنبثقة.");
+      } else if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        setError("أُغلقت نافذة Google قبل إكمال الدخول. اضغط زر تسجيل الدخول وحاول مجدداً.");
+      } else if (code === "auth/network-request-failed") {
+        setError("فشل الاتصال بـ Google أو Firebase. افحص الإنترنت وحاول مرة أخرى.");
+      } else if (code === "auth/invalid-api-key") {
+        setError("هناك مشكلة في إعداد Firebase API key. يرجى مراجعة إعدادات مشروع Firebase.");
+      } else {
+        setError("تعذّر تسجيل الدخول بجوجل. الرمز: " + (code || "غير معروف") + ". جرّب فتح الموقع في Chrome.");
+      }
+    } finally {
       setLoginBusy(false);
     }
   }
