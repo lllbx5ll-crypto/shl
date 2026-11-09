@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { Bot, Check, CircleAlert, Code2, Copy, Cpu, Eye, LoaderCircle, Send, Sparkles, WandSparkles } from "lucide-react";
+import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { Bot, Check, CircleAlert, Code2, Copy, Cpu, Eye, Link as LinkIcon, LoaderCircle, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
 import {
   BROWSER_MODELS,
@@ -9,27 +9,9 @@ import {
   browserBuildWebsite,
   buildFreeTemplate
 } from "./browserAI.js";
+import { renderSiteDocument } from "./sitePreview.js";
 import "./builder.css";
 
-function htmlPreview(files) {
-  if (!files || !files["index.html"]) return "";
-  const css = (files["styles.css"] || "").replace(/<\/style/gi, "<\\/style");
-  const js = (files["script.js"] || "").replace(/<\/script/gi, "<\\/script");
-  const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; connect-src \'none\'; form-action \'none\'; base-uri \'none\'">';
-  let html = files["index.html"];
-  html = /<head[^>]*>/i.test(html)
-    ? html.replace(/<head([^>]*)>/i, "<head$1>" + policy)
-    : "<head>" + policy + "</head>" + html;
-  const styleTag = "<style>" + css + "</style>";
-  html = /<link[^>]+href=["']styles\.css["'][^>]*>/i.test(html)
-    ? html.replace(/<link[^>]+href=["']styles\.css["'][^>]*>/i, styleTag)
-    : html.replace(/<\/head>/i, styleTag + "</head>");
-  const scriptTag = "<script>" + js + "</script>";
-  html = /<script[^>]+src=["']script\.js["'][^>]*><\/script>/i.test(html)
-    ? html.replace(/<script[^>]+src=["']script\.js["'][^>]*><\/script>/i, scriptTag)
-    : html.replace(/<\/body>/i, scriptTag + "</body>");
-  return html;
-}
 
 export default function BrowserBuilder({ user }) {
   const [webgpu, setWebgpu] = useState(false);
@@ -48,9 +30,12 @@ export default function BrowserBuilder({ user }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saved, setSaved] = useState(false);
+  const [publishedId, setPublishedId] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const publishedUrl = publishedId ? window.location.origin + "/s/" + publishedId : "";
 
   useEffect(() => setWebgpu(browserAICapable()), []);
-  const preview = useMemo(() => htmlPreview(files), [files]);
+  const preview = useMemo(() => renderSiteDocument(files), [files]);
 
   async function saveFiles(result, prompt) {
     setSaved(false);
@@ -78,7 +63,7 @@ export default function BrowserBuilder({ user }) {
         setProjectId(reference.id);
       }
       setSaved(true);
-      setNotice("تم حفظ ملفات الموقع في Firestore. لم يتم نشره للعامة.");
+      setNotice(publishedId ? "تم حفظ تعديلك كمسودة. الرابط العام ما زال يعرض النسخة المنشورة السابقة حتى تضغط «تحديث الموقع المنشور»." : "تم حفظ ملفات الموقع في Firestore. الموقع خاص حتى توافق على نشره.");
     } catch {
       setNotice("المعاينة جاهزة، لكن تعذّر الحفظ في Firestore. تحقق من القواعد المنشورة.");
     }
@@ -142,6 +127,85 @@ export default function BrowserBuilder({ user }) {
     } finally {
       setBusy(false);
       setProgress("");
+    }
+  }
+
+  async function publishWebsite() {
+    if (!files || !saved || !projectId || publishing || busy) return;
+    const wasPublished = Boolean(publishedId);
+    const approved = window.confirm(
+      wasPublished
+        ? "هل راجعت التعديلات وتوافق على تحديث موقعك العام بنفس الرابط؟"
+        : "هل راجعت الموقع في المعاينة وتوافق أن يصبح متاحاً لأي شخص يملك الرابط؟"
+    );
+    if (!approved) return;
+
+    setPublishing(true);
+    setError("");
+    setNotice("");
+    try {
+      const siteId = user.uid + "_" + projectId;
+      const ref = doc(db, "publishedSites", siteId);
+      const current = await getDoc(ref).catch(() => null);
+      const publishedSite = {
+        ownerUid: user.uid,
+        projectId,
+        name: (projectName.trim() || "موقع من ZYQMORA").slice(0, 80),
+        status: "published",
+        files,
+        updatedAt: serverTimestamp(),
+        ...(current?.exists() ? {} : { createdAt: serverTimestamp() })
+      };
+      await setDoc(ref, publishedSite, { merge: true });
+      setPublishedId(siteId);
+      try {
+        await updateDoc(doc(db, "projects", projectId), {
+          publishedSiteId: siteId,
+          status: "published",
+          updatedAt: serverTimestamp()
+        });
+      } catch (syncError) {
+        console.error("Published site exists but project metadata sync failed:", syncError);
+      }
+      setNotice(wasPublished ? "تم تحديث الموقع على رابطه العام." : "تم نشر الموقع! يمكنك الآن نسخ الرابط وإرساله لأي شخص.");
+    } catch (err) {
+      setError("تعذّر نشر الموقع. تأكد أنك نشرت أحدث قواعد Firestore وأن Firebase Hosting يعمل: " + (err?.message || ""));
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function unpublishWebsite() {
+    if (!publishedId || publishing || busy) return;
+    if (!window.confirm("إيقاف النشر سيجعل الرابط العام غير متاح. هل أنت متأكد؟")) return;
+    setPublishing(true);
+    setError("");
+    try {
+      await deleteDoc(doc(db, "publishedSites", publishedId));
+      setPublishedId("");
+      try {
+        await updateDoc(doc(db, "projects", projectId), {
+          status: "draft",
+          publishedSiteId: deleteField(),
+          updatedAt: serverTimestamp()
+        });
+      } catch (syncError) {
+        console.error("Unpublished site but project metadata sync failed:", syncError);
+      }
+      setNotice("تم إيقاف نشر الموقع. مشروعك الخاص لا يزال محفوظاً.");
+    } catch (err) {
+      setError("تعذّر إيقاف النشر. تحقق من اتصالك وقواعد قاعدة البيانات.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function copyPublishedLink() {
+    try {
+      await navigator.clipboard.writeText(publishedUrl);
+      setNotice("تم نسخ رابط موقعك العام.");
+    } catch {
+      setNotice("يمكنك نسخ الرابط الظاهر يدوياً.");
     }
   }
 
@@ -223,7 +287,7 @@ export default function BrowserBuilder({ user }) {
             <div><strong><Eye size={17}/> معاينة الموقع</strong><small>{files ? "ملفات HTML وCSS وJavaScript" : "لم يتم إنشاء موقع بعد"}</small></div>
             {files && <div className="ai-preview-header-actions">
               {saved && <span className="ai-generated-badge"><Check size={13}/> محفوظ</span>}
-              <button type="button" onClick={() => {setFiles(null);setProjectId("");setSaved(false);setNotice("");setActiveTab("preview");setProjectName("");}}>مشروع جديد</button>
+              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setActiveTab("preview");setProjectName("");}}>مشروع جديد</button>
             </div>}
           </div>
           {files ? (
@@ -237,6 +301,23 @@ export default function BrowserBuilder({ user }) {
               {activeTab === "preview"
                 ? <iframe className="ai-live-preview" title="معاينة آمنة للموقع" sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={preview}/>
                 : <pre className="ai-code-view"><code>{files[activeTab] || ""}</code></pre>}
+              <div className="publish-actions">
+                <div className="publish-help">
+                  <strong>الخطوة الأخيرة: الموافقة والنشر</strong>
+                  <span>شاهد المعاينة أولاً، وبعد موافقتك ننشر الموقع برابط عام، وليس كملفات للتحميل.</span>
+                </div>
+                <div className="publish-buttons">
+                  <button type="button" className="ai-build-button" onClick={publishWebsite} disabled={!saved || busy || publishing}>
+                    <Globe2 size={16}/> {publishing ? "جارٍ النشر..." : publishedId ? "تحديث الموقع المنشور" : "أوافق، انشر الموقع برابط"}
+                  </button>
+                  {publishedId && <button type="button" className="ai-send-button" onClick={unpublishWebsite} disabled={publishing || busy}><Trash2 size={15}/> إيقاف النشر</button>}
+                </div>
+                {publishedUrl && <div className="published-link-result">
+                  <span><Check size={15}/> موقعك منشور ويمكن فتحه من أي متصفح:</span>
+                  <a href={publishedUrl} target="_blank" rel="noopener noreferrer" dir="ltr">{publishedUrl}</a>
+                  <button type="button" className="ai-send-button" onClick={copyPublishedLink}><LinkIcon size={15}/> نسخ رابط الموقع</button>
+                </div>}
+              </div>
               {notice && <div className="ai-save-status">{notice}</div>}
             </>
           ) : (
@@ -250,7 +331,7 @@ export default function BrowserBuilder({ user }) {
       </div>
       <div className="ai-builder-footnote">
         <CircleAlert size={15}/>
-        <span>هذه نسخة مجانية تجريبية: القوالب تُولّد بقواعد برمجية، والذكاء الاصطناعي المحلي يحتاج موارد جهاز الزائر. لا يوجد خادم AI مدفوع أو Puter. لا يُنشر موقع المستخدم للعامة دون موافقته.</span>
+        <span>المستخدم يعاين الموقع أولاً ثم يوافق على نشره برابط عام. القوالب الفورية مبرمجة، والذكاء المحلي يتطلب قدرة جهاز الزائر. روابط النشر تحتاج Firebase Hosting وقواعد Firestore المحدثة، ولا نضمن تشغيل الذكاء على كل الأجهزة.</span>
       </div>
     </section>
   );
