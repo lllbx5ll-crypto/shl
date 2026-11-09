@@ -263,7 +263,7 @@ app.post("/api/ai/build", requireUser, async (req, res) => {
         {
           role: "user",
           content: existingFiles
-            ? "طلب تعديل الموقع الحالي: " + prompt + "\\n\\nالملفات الحالية (مرجع للتعديل):\\n" + JSON.stringify(existingFiles) + "\\n\\nأعد محتوى الملفات الثلاثة كاملة بعد التعديل."
+            ? "طلب تعديل الموقع الحالي: " + prompt + "\n\nالملفات الحالية (مرجع للتعديل):\n" + JSON.stringify(existingFiles) + "\n\nأعد محتوى الملفات الثلاثة كاملة بعد التعديل."
             : prompt
         }
       ],
