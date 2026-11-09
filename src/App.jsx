@@ -239,7 +239,7 @@ function App() {
       setProjectName("");
       setPrompt("");
       setActiveTab("projects");
-      setNotice("تم حفظ طلب المشروع في قاعدة البيانات. توليد الأكواد سيُفعّل بعد ربط محرك الذكاء الاصطناعي.");
+      setNotice("تم حفظ وصف المشروع. افتح قسم «إنشاء» ليبني لك الموقع ويعرضه قبل النشر.");
     } catch (err) {
       console.error(err);
       setNotice("تعذّر حفظ المشروع. تأكد من نشر قواعد Firestore ثم حاول مجدداً.");
@@ -295,58 +295,23 @@ function App() {
 
   const navItems = [
     { id: "overview", label: "الرئيسية", icon: LayoutDashboard },
-    { id: "builder", label: "الذكاء الاصطناعي", icon: Bot },
+    { id: "builder", label: "إنشاء", icon: Bot },
     { id: "projects", label: "مشاريعي", icon: FolderKanban },
     { id: "settings", label: "الحساب", icon: Settings2 }
   ];
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand-lockup" href="#home" onClick={() => setActiveTab("overview")}>
-          <img src={brandLogo} alt={brand} />
-        </a>
-        <div className="workspace-label">مساحة العمل</div>
-        <nav className="side-nav">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button key={item.id} className={activeTab === item.id ? "nav-item active" : "nav-item"} onClick={() => setActiveTab(item.id)}>
-                <Icon size={18} />
-                <span>{item.label}</span>
-                {activeTab === item.id && <ChevronLeft size={15} className="nav-chevron" />}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="engine-status"><span className="status-dot" /><div><strong>الذكاء المحلي بالمتصفح</strong><small>بدون API مدفوع • بحسب دعم جهاز الزائر</small></div></div>
-          <div className="developer-line">Developed by <strong>Al-Qmishi</strong></div>
-        </div>
-      </aside>
-
       <main className="main-area">
         <header className="topbar">
-          <div className="mobile-brand"><img src={brandLogo} alt={brand} /></div>
-          <div className="topbar-right"><span className="topbar-caption">مساحة إنشاء المواقع</span><span className="plan-pill">الخطة التجريبية</span></div>
+          <a className="topbar-brand" href="#home" onClick={() => setActiveTab("overview")}><img src={brandLogo} alt={brand} /></a>
+          <div className="topbar-right"><span className="topbar-caption">مساحة إنشاء المواقع</span><span className="plan-pill">الخطة المجانية</span></div>
           <div className="user-menu">
             {user.photoURL ? <img className="avatar" src={user.photoURL} alt="" /> : <div className="avatar avatar-fallback">{(user.displayName || user.email || "U").slice(0, 1)}</div>}
             <div className="user-meta"><strong>{user.displayName || "مستخدم ZYQMORA"}</strong><small>{user.email}</small></div>
             <button className="icon-button" title="تسجيل الخروج" onClick={handleLogout}><LogOut size={18} /></button>
           </div>
         </header>
-
-        <nav className="mobile-nav" aria-label="التنقل الرئيسي">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button key={item.id} className={activeTab === item.id ? "nav-item active" : "nav-item"} onClick={() => setActiveTab(item.id)}>
-                <Icon size={17} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
 
         <div className="content-wrap">
           {notice && <div className="notice"><span>{notice}</span><button onClick={() => setNotice("")}>إغلاق</button></div>}
@@ -379,7 +344,7 @@ function App() {
                   <textarea id="project-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="مثلاً: أريد موقعاً احترافياً لشركة تقنية، يحتوي على صفحة رئيسية وخدمات ومعرض أعمال ونموذج تواصل..." rows={5} maxLength={6000} />
                   <div className="form-bottom"><span>{prompt.length}/6000 حرف</span><button className="primary-button" type="submit" disabled={saving || !prompt.trim()}><Plus size={18} />{saving ? "جارٍ الحفظ..." : "حفظ المشروع"}</button></div>
                 </form>
-                <div className="honest-note"><CircleHelp size={16} /> في هذه النسخة نحفظ وصف المشروع في Firestore. لتوليد موقع ومعاينته افتح تبويب «الذكاء الاصطناعي».</div>
+                <div className="honest-note"><CircleHelp size={16} /> احفظ فكرتك هنا، أو انتقل إلى «إنشاء» ليحوّلها الذكاء الاصطناعي إلى موقع قابل للمعاينة والنشر.</div>
               </section>
 
               <ProjectList projects={projects.slice(0, 3)} loading={projectsLoading} error={projectsError} onOpen={setSelectedProject} onDelete={removeProject} onAll={() => setActiveTab("projects")} />
@@ -409,6 +374,19 @@ function App() {
           )}
         </div>
       </main>
+
+      <nav className="bottom-nav" aria-label="التنقل الرئيسي">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = activeTab === item.id;
+          return (
+            <button key={item.id} type="button" className={active ? "nav-item active" : "nav-item"} aria-current={active ? "page" : undefined} onClick={() => setActiveTab(item.id)}>
+              <Icon size={20} strokeWidth={active ? 2.35 : 1.9} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {selectedProject && (
         <div className="modal-backdrop" onClick={() => setSelectedProject(null)}>

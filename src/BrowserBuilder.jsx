@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
+import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Palette, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
 import { buildFreeTemplate } from "./browserAI.js";
 import { renderSiteDocument } from "./sitePreview.js";
@@ -25,13 +25,22 @@ async function requestCloudAI(user, endpoint, payload) {
   return data;
 }
 
+const designStyles = [
+  { id: "premium", label: "فاخر" },
+  { id: "modern", label: "عصري" },
+  { id: "minimal", label: "هادئ" },
+  { id: "creative", label: "إبداعي" },
+  { id: "tech", label: "تقني" }
+];
+
 export default function BrowserBuilder({ user }) {
   const [messages, setMessages] = useState([{
     role: "assistant",
-    content: "أهلاً بك! أنا ZYQMORA AI. أعمل على خوادم Cloudflare؛ لا تحتاج إلى تنزيل أي نموذج على جهازك."
+    content: "أهلاً بك في ZYQMORA AI. صف الموقع الذي تتخيله، واختر أسلوب التصميم، وسأجهّز لك موقعاً كاملاً لتعاينه قبل نشره. لا تحتاج إلى تنزيل نموذج على جهازك."
   }]);
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [designStyle, setDesignStyle] = useState("premium");
   const [files, setFiles] = useState(null);
   const [projectId, setProjectId] = useState("");
 
@@ -46,7 +55,7 @@ export default function BrowserBuilder({ user }) {
 
   const preview = useMemo(() => renderSiteDocument(files), [files]);
 
-  async function saveFiles(result, prompt) {
+  async function saveFiles(result, prompt, style) {
     setSaved(false);
     try {
       if (projectId) {
@@ -54,6 +63,7 @@ export default function BrowserBuilder({ user }) {
           prompt: prompt.slice(0, 6000),
           generatedFiles: result.files,
           aiModel: result.model,
+          designStyle: style,
           updatedAt: serverTimestamp()
         });
       } else {
@@ -66,6 +76,7 @@ export default function BrowserBuilder({ user }) {
           visibility: "private",
           generatedFiles: result.files,
           aiModel: result.model,
+          designStyle: style,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -89,11 +100,12 @@ export default function BrowserBuilder({ user }) {
     try {
       let result;
       if (type === "template") {
-        result = buildFreeTemplate(prompt);
+        result = buildFreeTemplate(prompt, designStyle);
       } else {
         setProgress("إرسال الطلب إلى الذكاء الاصطناعي السحابي...");
         result = await requestCloudAI(user, "/api/ai/build", {
           prompt,
+          style: designStyle,
           existingFiles: files || undefined
         });
       }
@@ -103,7 +115,7 @@ export default function BrowserBuilder({ user }) {
         { role: "user", content: prompt },
         { role: "assistant", content: result.summary }
       ]);
-      await saveFiles(result, prompt);
+      await saveFiles(result, prompt, designStyle);
     } catch (err) {
       setError(err?.message || "حدث خطأ. حاول مجدداً.");
     } finally {
@@ -219,9 +231,9 @@ export default function BrowserBuilder({ user }) {
     <section className="ai-builder">
       <header className="ai-builder-heading">
         <div>
-          <div className="eyebrow"><Sparkles size={15} /> مجاني بلا مفاتيح API</div>
-          <h1>ابنِ موقعك مع ZYQMORA AI</h1>
-          <p>ذكاء اصطناعي سحابي يعمل على خوادم Cloudflare، دون تنزيل نماذج على جهازك.</p>
+          <div className="eyebrow"><Sparkles size={15} /> صمّم موقعك في دقائق</div>
+          <h1>حوّل فكرتك إلى موقع احترافي</h1>
+          <p>اكتب فكرتك، اختر الهوية البصرية، وشاهد موقعك مباشرة قبل نشره.</p>
         </div>
         <div className="engine-indicator is-online">
           <span className="engine-indicator-dot" />
@@ -233,12 +245,25 @@ export default function BrowserBuilder({ user }) {
           <div className="ai-panel-header">
             <div className="ai-panel-title">
               <div className="ai-panel-icon"><Bot size={19}/></div>
-              <div><strong>دردشة وإنشاء المواقع</strong><small>بدون Puter أو API مدفوع</small></div>
+              <div><strong>مساعد التصميم والبرمجة</strong><small>لا تحتاج إلى مفتاح API خاص بك</small></div>
             </div>
             <span className="cloud-model-label"><Cpu size={15}/> Qwen Coder • Cloudflare</span>
           </div>
           <div className="browser-mode-note">
-            يعمل نموذج الذكاء الاصطناعي على خوادم Cloudflare؛ لا يتم تنزيل أوزان النموذج إلى جوال المستخدم أو حاسوبه. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
+            تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب الاستضافة.
+          </div>
+          <div className="style-selector">
+            <div className="style-selector-heading">
+              <span><Palette size={15} /> اتجاه التصميم</span>
+              <small>يمكنك تغييره لكل مشروع</small>
+            </div>
+            <div className="style-options">
+              {designStyles.map((style) => (
+                <button key={style.id} type="button" className={designStyle === style.id ? "style-chip selected" : "style-chip"} aria-pressed={designStyle === style.id} onClick={() => setDesignStyle(style.id)} disabled={busy}>
+                  {style.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="ai-message-list">
             {messages.map((message, i) => (
@@ -259,9 +284,9 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-compose-actions">
               <span>{input.length}/6000</span>
               <div>
-                <button type="button" className="ai-send-button" onClick={sendChat} disabled={busy || !input.trim()}><Send size={15}/> دردشة AI</button>
-                <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim()}><WandSparkles size={15}/> إنشاء بالذكاء</button>
-                <button type="button" className="ai-send-button" onClick={() => generate("template")} disabled={busy || !input.trim()}><Code2 size={15}/> قالب فوري مجاني</button>
+                <button type="button" className="ai-send-button" onClick={sendChat} disabled={busy || !input.trim()}><Send size={15}/> اسأل المساعد</button>
+                <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim()}><WandSparkles size={15}/> صمّم موقعي</button>
+                <button type="button" className="ai-send-button" onClick={() => generate("template")} disabled={busy || !input.trim()}><Code2 size={15}/> قالب مجاني سريع</button>
               </div>
             </div>
           </div>
@@ -301,7 +326,7 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-preview-empty">
               <div className="ai-preview-empty-icon"><Code2 size={31}/></div>
               <strong>مساحة موقعك الجديد</strong>
-              <p>اكتب وصف موقعك واضغط «إنشاء بالذكاء» ليبنيه النموذج السحابي دون تنزيل على جهازك، أو استخدم القالب الفوري.</p>
+              <p>اكتب وصفاً واضحاً واختر النمط، ثم اضغط «صمّم موقعي». ستظهر المعاينة هنا دون تنزيل نموذج على جهازك.</p>
             </div>
           )}
         </section>
