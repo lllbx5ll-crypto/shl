@@ -230,13 +230,19 @@ export async function createWebsite(env,body,notify) {
   notify("planning","مدير الإبداع يبتكر الاسم والهوية وخريطة الصفحات...");
   let plan=null;
   let planResult=null;
+  const planMessages=[
+    {role:"system",content:PLAN_SYSTEM},
+    {role:"user",content:"Visual preference: "+STYLES[style]+"\n\nUser brief:\n"+body.prompt.slice(0,5000)}
+  ];
   try {
-    planResult=await callStage(env,"plan",[
-      {role:"system",content:PLAN_SYSTEM},
-      {role:"user",content:"Visual preference: "+STYLES[style]+"\n\nUser brief:\n"+body.prompt.slice(0,5000)}
-    ],1500);
+    planResult=await callStage(env,"plan",planMessages,1500);
     plan=planJson(planResult.text);
-    if(!plan)throw new Error("The planning model returned invalid design JSON");
+    if(!plan&&configured.length>1) {
+      const retry=await callStage(env,"plan",planMessages,1500,{excludeProviders:[planResult.provider]});
+      const repairedPlan=planJson(retry.text);
+      if(repairedPlan){plan= repairedPlan;planResult=retry;}
+    }
+    if(!plan)console.warn("Design planner returned invalid JSON; the coding agents will infer the design from the prompt.");
   }catch(error){console.warn("Optional design planning unavailable; continuing with prompt.",error?.message);}
 
   const context=makeContext(body.prompt,style,plan,existing);

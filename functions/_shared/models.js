@@ -24,7 +24,7 @@ export const AI_MODELS = Object.freeze({
 export const DEFAULT_AI_MODEL = "gemma-4";
 
 const ROUTES = Object.freeze({
-  plan: ["gemini", "openrouter", "cloudflare"],
+  plan: ["openrouter", "gemini", "cloudflare"],
   html: ["groq", "openrouter", "gemini", "cloudflare"],
   css: ["gemini", "groq", "openrouter", "cloudflare"],
   js: ["groq", "openrouter", "gemini", "cloudflare"],
