@@ -138,7 +138,7 @@ function planJson(raw) {
       name:String(x.name||"").slice(0,90),
       concept:String(x.concept||"").slice(0,350),
       visualDirection:String(x.visualDirection||"").slice(0,500),
-      palette:Array.isArray(x.palette)?x.palette.slice(0,6).map(c=>String(c).slice(0,30)):[],
+      palette:Array.isArray(x.palette)?x.palette.map(c=>String(c)).filter(c=>/^#[0-9a-f]{3,8}$/i.test(c)).slice(0,6):[],
       sections:x.sections.slice(0,9).map(s=>({type:String(s?.type||"").slice(0,40),title:String(s?.title||"").slice(0,120),layout:String(s?.layout||"").slice(0,180),details:String(s?.details||"").slice(0,300)})),
       interactions:Array.isArray(x.interactions)?x.interactions.slice(0,8).map(v=>String(v).slice(0,150)):[]
     };
