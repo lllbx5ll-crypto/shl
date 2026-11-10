@@ -1,5 +1,5 @@
 import { enforceUserRateLimit, jsonError, requireFirebaseUser, RequestError } from "../../_shared/auth.js";
-import { AI_MODELS, selectAIModel, runTextModel } from "../../_shared/models.js";
+import { runRoutedTextModel, hasAIProvider, getConfiguredAIProviders } from "../../_shared/models.js";
 
 const STYLES = {
   auto: "Infer a distinctive art direction, brand identity, palette and layout directly from the user's brief. Never ask for a project name.",
@@ -13,9 +13,6 @@ const STYLES = {
   ocean: "Deep ocean palette with midnight blue and luminous azure accents.",
   forest: "Botanical forest palette with sophisticated greens and warm neutrals."
 };
-const PLAN_MODEL = AI_MODELS["gemma-4"];
-const FALLBACK_MODEL = AI_MODELS["qwen-coder"];
-
 const PLAN_SYSTEM = [
   "You are a senior digital creative director and product strategist.",
   "Read the user brief and invent a fitting brand identity automatically. Never ask for a project name.",
@@ -167,12 +164,8 @@ function contextFromFiles(existing) {
     "script.js":typeof existing["script.js"]==="string"?existing["script.js"].slice(0,1800):""
   });
 }
-async function callStage(ai,model,messages,maxTokens) {
-  try{return {text:await runTextModel(ai,model,messages,maxTokens),model};}
-  catch(error){
-    if(model.id===FALLBACK_MODEL.id)throw error;
-    return {text:await runTextModel(ai,FALLBACK_MODEL,messages,maxTokens),model:FALLBACK_MODEL};
-  }
+async function callStage(env,task,messages,maxTokens,options={}) {
+  return runRoutedTextModel(env,task,messages,maxTokens,options);
 }
 function createFiles(markup,css,js,siteName,prompt,plan) {
   const arabic=/[\u0600-\u06FF]/.test(prompt);
@@ -207,9 +200,9 @@ function createFiles(markup,css,js,siteName,prompt,plan) {
     "</html>"
   ].join("\n");
   return {
-    "index.html":html.slice(0,150000),
-    "styles.css":(safeCss+"\n"+BASE_CSS).slice(0,130000),
-    "script.js":((safeJs(js)?js:"")+"\n"+BASE_JS).slice(0,40000)
+    "index.html":html,
+    "styles.css":safeCss+"\n"+BASE_CSS,
+    "script.js":(safeJs(js)?js:"")+"\n"+BASE_JS
   };
 }
 export function splitHtml(raw) {
@@ -227,87 +220,118 @@ function makeContext(prompt,style,plan,existing) {
     "PROJECT NAME:\nDo not ask for a project name. Derive the brand name and page title automatically from the prompt."
   ].join("\n\n");
 }
-export async function createWebsite(ai,body,notify) {
+export async function createWebsite(env,body,notify) {
   const style=STYLES[body.style]?body.style:"auto";
   const existing=contextFromFiles(body.existingFiles);
-  let model=selectAIModel(body.model);
+  const configured=getConfiguredAIProviders(env);
+  if(!hasAIProvider(env))throw new RequestError("لم يتم ربط أي محرك ذكاء اصطناعي. اربط Workers AI أو مفاتيح Gemini وGroq وOpenRouter في أسرار Cloudflare.",503);
+
   notify("analyzing","جارٍ فهم فكرتك وتحديد نوع الموقع والجمهور...");
-  notify("planning","جارٍ ابتكار الاسم والهوية البصرية وتخطيط الأقسام تلقائياً...");
+  notify("planning","مدير الإبداع يبتكر الاسم والهوية وخريطة الصفحات...");
   let plan=null;
+  let planResult=null;
   try {
-    const planned=await runTextModel(ai,PLAN_MODEL,[
+    planResult=await callStage(env,"plan",[
       {role:"system",content:PLAN_SYSTEM},
       {role:"user",content:"Visual preference: "+STYLES[style]+"\n\nUser brief:\n"+body.prompt.slice(0,5000)}
-    ],1250);
-    plan=planJson(planned);
-  }catch(error){console.warn("Design planning unavailable; continuing from prompt.",error?.message);}
-  const context=makeContext(body.prompt,style,plan,existing);
+    ],1500);
+    plan=planJson(planResult.text);
+    if(!plan)throw new Error("The planning model returned invalid design JSON");
+  }catch(error){console.warn("Optional design planning unavailable; continuing with prompt.",error?.message);}
 
-  notify("building","جارٍ بناء هيكل الموقع وأقسامه بمحتوى مخصص...");
+  const context=makeContext(body.prompt,style,plan,existing);
+  notify("building","مهندس الواجهة يبني بنية الموقع وأقسامه...");
   const htmlMessages=[
     {role:"system",content:HTML_SYSTEM},
-    {role:"user",content:context+"\n\nCreate the complete body fragment now. Include at least five detailed section elements, distinct layouts and specific copy."}
+    {role:"user",content:context+"\n\nCreate the complete body fragment now. Include at least five detailed section elements, distinct layouts and specific copy. Keep the result complete and concise enough to close every tag."}
   ];
-  let htmlResult=await callStage(ai,model,htmlMessages,3600);
-  model=htmlResult.model;
+  let htmlResult=await callStage(env,"html",htmlMessages,6200);
   let markup;
-  try{markup=validateMarkup(htmlResult.text);}
-  catch(error){
-    notify("refining","جارٍ إعادة بناء أقسام الموقع الناقصة تلقائياً...");
-    const retry=await callStage(ai,model,[
-      {role:"system",content:HTML_SYSTEM+"\nThe previous output was incomplete. Return the complete body fragment again, not a full HTML document."},
-      {role:"user",content:context+"\n\nPrevious output was incomplete. Include at least 5 complete section elements, close every section and element, and return more than 1000 characters. Output only the body fragment."}
-    ],4300);
-    model=retry.model;
+  try {
+    markup=validateMarkup(htmlResult.text);
+  } catch(error) {
+    notify("refining","فاحص الجودة اكتشف أقساماً ناقصة؛ يعاد بناء الصفحة بمحرك آخر...");
+    const retryOptions=configured.length>1?{excludeProviders:[htmlResult.provider]}:{};
+    const retry=await callStage(env,"html",[
+      {role:"system",content:HTML_SYSTEM+"\nThe previous output was truncated or structurally incomplete. Rebuild the complete page. Do not shorten by omitting sections; close all tags."},
+      {role:"user",content:context+"\n\nReturn a complete HTML body fragment with header, navigation, hero, at least five fully closed sections, CTA and footer. Use compact but meaningful content. No markdown."}
+    ],6500,retryOptions);
+    htmlResult=retry;
     markup=validateMarkup(retry.text);
   }
 
-  notify("styling","جارٍ تصميم الألوان والخطوط والتخطيط المتجاوب...");
   const cssMessages=[
     {role:"system",content:CSS_SYSTEM},
     {role:"user",content:context+"\n\nHTML BODY FRAGMENT:\n"+markup.slice(0,12500)+"\n\nWrite the complete matching stylesheet. Include mobile breakpoints."}
   ];
-  let cssResult=await callStage(ai,model,cssMessages,3600);
-  model=cssResult.model;
+  const jsMessages=[
+    {role:"system",content:JS_SYSTEM},
+    {role:"user",content:context+"\n\nHTML:\n"+markup.slice(0,9000)+"\n\nGenerate only the local interactions needed by this page."}
+  ];
+  notify("styling","مصمم الواجهة يبتكر الألوان والتخطيط المتجاوب...");
+  notify("interactions","مهندس التفاعلات يبني وظائف الموقع بالتوازي...");
+  const [cssResult,jsOutcome]=await Promise.all([
+    callStage(env,"css",cssMessages,5000),
+    callStage(env,"js",jsMessages,1700).then((value)=>({value})).catch((error)=>({error}))
+  ]);
   let css=extractCss(cssResult.text);
-  if(!validCss(css)){
-    notify("refining","جارٍ إصلاح ملف التنسيق وتحسين توافقه مع الهواتف...");
-    const retry=await callStage(ai,model,[
-      {role:"system",content:CSS_SYSTEM+"\nThe previous CSS was incomplete or invalid. Return a complete stylesheet with balanced braces and mobile media queries."},
-      {role:"user",content:context+"\n\nHTML:\n"+markup.slice(0,10000)+"\n\nPrevious CSS:\n"+css.slice(0,4500)+"\n\nReturn corrected complete CSS only."}
-    ],4300);
-    model=retry.model;
+  if(!validCss(css)) {
+    notify("refining","فاحص التنسيق يطلب إصلاح CSS بمحرك بديل...");
+    const retryOptions=configured.length>1?{excludeProviders:[cssResult.provider]}:{};
+    const retry=await callStage(env,"css",[
+      {role:"system",content:CSS_SYSTEM+"\nThe previous CSS was incomplete. Return a complete stylesheet with balanced braces and responsive media queries. No HTML or markdown."},
+      {role:"user",content:context+"\n\nHTML:\n"+markup.slice(0,10000)+"\n\nPrevious CSS:\n"+css.slice(0,3500)+"\n\nReturn the corrected complete CSS only."}
+    ],5000,retryOptions);
+    cssResult=retry;
     css=extractCss(retry.text);
   }
+  if(!validCss(css))throw new RequestError("لم يكتمل ملف التصميم CSS حتى بعد محاولة الإصلاح. لم نحفظ موقعاً ناقصاً؛ أعد المحاولة لاحقاً.",502);
 
-  notify("interactions","جارٍ تجهيز وظائف الموقع والأزرار والنماذج...");
   let js="";
-  try{
-    const jsResult=await callStage(ai,model,[
-      {role:"system",content:JS_SYSTEM},
-      {role:"user",content:context+"\n\nHTML:\n"+markup.slice(0,9000)+"\n\nGenerate only the local interactions needed by this page."}
-    ],1100);
-    model=jsResult.model;
+  let jsResult=null;
+  if(jsOutcome.value) {
+    jsResult=jsOutcome.value;
     const candidate=extractJs(jsResult.text);
     js=safeJs(candidate)?candidate:"";
-  }catch(error){console.warn("Using built-in local interactions.",error?.message);}
+  } else {
+    console.warn("Custom interactions unavailable; built-in local interactions will be used.",jsOutcome.error?.message);
+  }
 
-  notify("reviewing","جارٍ تجميع ملفات الموقع والتحقق من سلامة الصفحة...");
+  notify("reviewing","فحص بنية HTML والتنسيق والتفاعلات وتجميع ملفات الموقع...");
   const siteName=deriveName(body.prompt,plan);
   const files=createFiles(markup,css,js,siteName,body.prompt,plan);
+  const fileLimits={"index.html":95000,"styles.css":95000,"script.js":95000};
+  for(const [name,content] of Object.entries(files)) {
+    if(new TextEncoder().encode(content).byteLength>fileLimits[name]) {
+      throw new RequestError("حجم ملف "+name+" تجاوز الحد الآمن للحفظ. أعد المحاولة بوصف أقصر قليلاً.",413);
+    }
+  }
   const isStore=/متجر|شراء|سلة|منتج|checkout|store|ecommerce|shop/i.test(body.prompt);
+  const team=[
+    planResult&&{role:"التخطيط",label:planResult.label},
+    {role:"بناء الواجهة",label:htmlResult.label},
+    {role:"التصميم البصري",label:cssResult.label},
+    jsResult&&{role:"التفاعلات",label:jsResult.label}
+  ].filter(Boolean);
+  const model=team.map((item)=>item.label).filter((label,index,all)=>all.indexOf(label)===index).join(" + ").slice(0,118);
+  const teamSummary=team.map((item)=>item.role+": "+item.label).join("؛ ");
   return {
     siteName,
-    summary:"تم إنشاء موقع "+siteName+" بهوية وتصميم مخصصين من وصفك، مع تخطيط متجاوب للهواتف والحاسوب."+
+    summary:"تم إنشاء موقع "+siteName+" بهوية وتصميم مخصصين من وصفك، مع تخطيط متجاوب للهواتف والحاسوب. تعاون فريق الذكاء الاصطناعي: "+teamSummary+"."+
       (isStore?" تتضمن المعاينة سلة وواجهة متجر تجريبية؛ الدفع والطلبات الحقيقية تحتاج ربط خدمات خلفية آمنة.":""),
-    model:model.id,modelLabel:model.label,designStyle:style,designPlan:plan||undefined,files
+    model:model||"ZYQMORA AI",
+    modelLabel:model||"ZYQMORA AI",
+    providers:team,
+    designStyle:style,
+    designPlan:plan||undefined,
+    files
   };
 }
 export async function onRequestPost({request,env}) {
   try{
     const user=await requireFirebaseUser(request);
     enforceUserRateLimit(user.uid,5);
-    if(!env.AI)throw new RequestError("خدمة الذكاء الاصطناعي غير مفعّلة على الخادم. اربط Workers AI باسم AI في Cloudflare.",503);
+    if(!hasAIProvider(env))throw new RequestError("لم يتم ربط أي محرك ذكاء اصطناعي. أضف مفاتيح Gemini أو Groq أو OpenRouter، أو فعّل Workers AI في Cloudflare.",503);
     const body=await request.json().catch(()=>null);
     const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
     if(!prompt)throw new RequestError("اكتب وصف الموقع أولاً.",400);
@@ -315,14 +339,14 @@ export async function onRequestPost({request,env}) {
     const style=typeof body?.style==="string"&&Object.hasOwn(STYLES,body.style)?body.style:"auto";
     const data={...body,prompt,style};
     if(!(request.headers.get("Accept")||"").includes("application/x-ndjson")){
-      return Response.json(await createWebsite(env.AI,data,()=>{}),{headers:{"Cache-Control":"no-store"}});
+      return Response.json(await createWebsite(env,data,()=>{}),{headers:{"Cache-Control":"no-store"}});
     }
     const stream=new ReadableStream({
       async start(controller){
         const encoder=new TextEncoder();
         const emit=(type,payload)=>controller.enqueue(encoder.encode(JSON.stringify({type,...payload})+"\n"));
         try{
-          const result=await createWebsite(env.AI,data,(stage,message)=>emit("progress",{stage,message}));
+          const result=await createWebsite(env,data,(stage,message)=>emit("progress",{stage,message}));
           emit("complete",{result});
         }catch(error){
           console.error("ZYQMORA build failed:",error);
