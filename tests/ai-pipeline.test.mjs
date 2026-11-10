@@ -39,9 +39,9 @@ function fakeAI(options) {
 }
 test("supports allow-listed models and safe default selection",()=>{
   assert.equal(Object.keys(AI_MODELS).length,3);
-  assert.equal(selectAIModel("gemma-4").label,"Gemma 4");
-  assert.equal(selectAIModel("qwen-3.8").label,"Qwen 3.8");
-  assert.equal(selectAIModel("arbitrary-model").label,"Gemma 4");
+  assert.equal(selectAIModel("gemma-4").label,"Cloudflare Gemma 4");
+  assert.equal(selectAIModel("qwen-3.8").label,"Cloudflare Qwen 3.8");
+  assert.equal(selectAIModel("arbitrary-model").label,"Cloudflare Gemma 4");
 });
 test("wraps a body fragment into complete HTML files",()=>{
   const full='<html lang="ar"><head><style>'+css+'</style></head><body>'+markup+'<script>'+js+'</script></body></html>';
