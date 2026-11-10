@@ -55,6 +55,11 @@ test("wraps a body fragment into complete HTML files",()=>{
 test("rejects genuinely incomplete body fragments",()=>{
   assert.throws(()=>splitHtml("<html><body><section>unfinished</section></body></html>"));
 });
+test("rejects truncated pages with unclosed sections",async()=>{
+  const truncated='<header><nav>Brand</nav></header><main>'+markup.slice(markup.indexOf("<section"),markup.indexOf("</footer>")) ;
+  const ai=fakeAI({html:()=>truncated});
+  await assert.rejects(()=>createWebsite(ai,{prompt:"موقع شركة",style:"auto"},()=>{}));
+});
 test("builds a bespoke prompt-only site through separate HTML CSS and JS stages",async()=>{
   const ai=fakeAI({});
   const stages=[];

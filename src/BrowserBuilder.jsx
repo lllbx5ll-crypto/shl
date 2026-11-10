@@ -6,36 +6,6 @@ import { renderSiteDocument } from "./sitePreview.js";
 import "./builder.css";
 
 
-async function requestCloudAI(user, endpoint, payload) {
-  if (!user?.getIdToken) throw new Error("انتهت جلسة الدخول. سجّل الدخول مجدداً.");
-  const token = await user.getIdToken();
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + token
-    },
-    body: JSON.stringify(payload)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "تعذّر الاتصال بمحرك الذكاء الاصطناعي السحابي.");
-  }
-  return data;
-}
-
-const designStyles = [
-  { id: "premium", label: "فاخر" },
-  { id: "modern", label: "عصري" },
-  { id: "minimal", label: "هادئ" },
-  { id: "creative", label: "إبداعي" },
-  { id: "tech", label: "تقني" },
-  { id: "ivory", label: "عاجي" },
-  { id: "clean", label: "نظيف" },
-  { id: "ocean", label: "محيطي" },
-  { id: "forest", label: "طبيعي" }
-];
-
 async function requestCloudBuild(user, payload, report) {
   if (!user?.getIdToken) throw new Error("انتهت جلسة الدخول. سجّل الدخول مجدداً.");
   const token = await user.getIdToken();
@@ -188,34 +158,6 @@ export default function BrowserBuilder({ user }) {
     } finally {
       setBusy(false);
       setProgress("");
-    }
-  }
-
-  async function sendChat() {
-    setBuildLog([]);
-    const text = input.trim();
-    if (!text || busy) return;
-    const next = [...messages, { role: "user", content: text }];
-    setMessages(next);
-    setInput("");
-    setBusy(true);
-    setError("");
-    setProgress("");
-    try {
-      setBuildStage("thinking");
-      setProgress("جاري التفكير في سؤالك وإعداد الرد...");
-      const result = await requestCloudAI(user, "/api/ai/chat", {
-        messages: next,
-        model: selectedModel
-      });
-      setMessages((current) => [...current, { role: "assistant", content: result.content }]);
-    } catch (err) {
-      setError(err?.message || "فشل تشغيل النموذج.");
-      setInput(text);
-    } finally {
-      setBusy(false);
-      setProgress("");
-      setBuildStage("");
     }
   }
 

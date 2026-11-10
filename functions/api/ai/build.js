@@ -151,7 +151,11 @@ function deriveName(prompt,plan) {
 }
 function validateMarkup(raw) {
   const markup=extractMarkup(raw);
-  if(markup.length<850||(markup.match(/<section\b/gi)||[]).length<4)throw new RequestError("التصميم لم يكتمل بعد. جارٍ إصلاح الأقسام تلقائياً.",502);
+  const opened=(markup.match(/<section\b/gi)||[]).length;
+  const closed=(markup.match(/<\/section\s*>/gi)||[]).length;
+  if(markup.length<850||opened<4||closed<opened||!/<header\b|<nav\b/i.test(markup)||!/<footer\b/i.test(markup)) {
+    throw new RequestError("التصميم لم يكتمل بعد. جارٍ إصلاح الأقسام تلقائياً.",502);
+  }
   return markup;
 }
 function contextFromFiles(existing) {
