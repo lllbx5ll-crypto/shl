@@ -30,8 +30,59 @@ const designStyles = [
   { id: "modern", label: "عصري" },
   { id: "minimal", label: "هادئ" },
   { id: "creative", label: "إبداعي" },
-  { id: "tech", label: "تقني" }
+  { id: "tech", label: "تقني" },
+  { id: "ivory", label: "عاجي" },
+  { id: "clean", label: "نظيف" },
+  { id: "ocean", label: "محيطي" },
+  { id: "forest", label: "طبيعي" }
 ];
+
+async function requestCloudBuild(user, payload, report) {
+  if (!user?.getIdToken) throw new Error("انتهت جلسة الدخول. سجّل الدخول مجدداً.");
+  const token = await user.getIdToken();
+  const response = await fetch("/api/ai/build", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/x-ndjson",
+      Authorization: "Bearer " + token
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "تعذّر بدء إنشاء الموقع.");
+  }
+  if (!response.headers.get("content-type")?.includes("application/x-ndjson")) {
+    return await response.json();
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("هذا المتصفح لا يدعم استقبال مراحل البناء. جرّب Chrome.");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result = null;
+  const acceptLine = (line) => {
+    if (!line.trim()) return;
+    let packet;
+    try { packet = JSON.parse(line); }
+    catch { throw new Error("وصلت بيانات غير مكتملة من خادم التوليد."); }
+    if (packet.type === "progress") report(packet.stage, packet.message);
+    if (packet.type === "complete") result = packet.result;
+    if (packet.type === "error") throw new Error(packet.message || "تعذّر إكمال تصميم الموقع.");
+  };
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) acceptLine(line);
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) acceptLine(buffer);
+  if (!result?.files?.["index.html"]) throw new Error("لم يصل الموقع المكتمل من الخادم. حاول مرة أخرى.");
+  return result;
+}
 
 export default function BrowserBuilder({ user }) {
   const [messages, setMessages] = useState([{
@@ -41,6 +92,9 @@ export default function BrowserBuilder({ user }) {
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
   const [designStyle, setDesignStyle] = useState("premium");
+  const [selectedModel, setSelectedModel] = useState("gemma-4");
+  const [buildStage, setBuildStage] = useState("");
+  const [buildLog, setBuildLog] = useState([]);
   const [files, setFiles] = useState(null);
   const [projectId, setProjectId] = useState("");
 
@@ -50,7 +104,22 @@ export default function BrowserBuilder({ user }) {
   const [notice, setNotice] = useState("");
   const [saved, setSaved] = useState(false);
   const [publishedId, setPublishedId] = useState("");
+  const [lastStoreRequest, setLastStoreRequest] = useState(false);
   const [publishing, setPublishing] = useState(false);
+
+  const modelOptions = [
+    { id: "gemma-4", label: "Gemma 4 • تصميم" },
+    { id: "qwen-coder", label: "Qwen Coder • برمجة" },
+    { id: "qwen-3.8", label: "Qwen 3.8 • تفكير" }
+  ];
+
+  function reportBuildStage(stage, message) {
+    setBuildStage(stage);
+    setProgress(message);
+    setBuildLog((current) => current.find((item) => item.stage === stage)
+      ? current.map((item) => item.stage === stage ? { stage, message } : item)
+      : [...current, { stage, message }]);
+  }
   const publishedUrl = publishedId ? window.location.origin + "/s/" + publishedId : "";
 
   const preview = useMemo(() => renderSiteDocument(files), [files]);
@@ -95,27 +164,33 @@ export default function BrowserBuilder({ user }) {
     setError("");
     setNotice("");
     setProgress("");
+    setBuildStage("");
+    setBuildLog([]);
     setBusy(true);
 
     try {
       let result;
       if (type === "template") {
+        reportBuildStage("building", "جارٍ إعداد القالب المتجاوب والألوان...");
         result = buildFreeTemplate(prompt, designStyle);
       } else {
-        setProgress("إرسال الطلب إلى الذكاء الاصطناعي السحابي...");
-        result = await requestCloudAI(user, "/api/ai/build", {
+        result = await requestCloudBuild(user, {
           prompt,
           style: designStyle,
+          model: selectedModel,
           existingFiles: files || undefined
-        });
+        }, reportBuildStage);
       }
       setFiles(result.files);
+      setLastStoreRequest(/متجر|شراء|سلة|منتج|shop|store|checkout|ecommerce/i.test(prompt));
       setInput("");
       setMessages((current) => [...current,
         { role: "user", content: prompt },
         { role: "assistant", content: result.summary }
       ]);
+      reportBuildStage("saving", "جارٍ حفظ الموقع في مشاريعك...");
       await saveFiles(result, prompt, designStyle);
+      reportBuildStage("complete", "اكتملت المعاينة وجاهزة للمراجعة.");
     } catch (err) {
       setError(err?.message || "حدث خطأ. حاول مجدداً.");
     } finally {
@@ -134,9 +209,11 @@ export default function BrowserBuilder({ user }) {
     setError("");
     setProgress("");
     try {
-      setProgress("يتصل بمحرك ZYQMORA AI السحابي...");
+      setBuildStage("thinking");
+      setProgress("جاري التفكير في سؤالك وإعداد الرد...");
       const result = await requestCloudAI(user, "/api/ai/chat", {
-        messages: next
+        messages: next,
+        model: selectedModel
       });
       setMessages((current) => [...current, { role: "assistant", content: result.content }]);
     } catch (err) {
@@ -145,6 +222,7 @@ export default function BrowserBuilder({ user }) {
     } finally {
       setBusy(false);
       setProgress("");
+      setBuildStage("");
     }
   }
 
@@ -247,7 +325,13 @@ export default function BrowserBuilder({ user }) {
               <div className="ai-panel-icon"><Bot size={19}/></div>
               <div><strong>مساعد التصميم والبرمجة</strong><small>لا تحتاج إلى مفتاح API خاص بك</small></div>
             </div>
-            <span className="cloud-model-label"><Cpu size={15}/> Qwen Coder • Cloudflare</span>
+            <label className="cloud-model-picker">
+              <Cpu size={16}/>
+              <span className="sr-only">نموذج الذكاء الاصطناعي</span>
+              <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)} disabled={busy} aria-label="اختر نموذج الذكاء الاصطناعي">
+                {modelOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
           </div>
           <div className="browser-mode-note">
             تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
@@ -275,7 +359,21 @@ export default function BrowserBuilder({ user }) {
                 </div>
               </article>
             ))}
-            {busy && <div className="ai-thinking"><LoaderCircle size={16}/>{progress || "جارٍ العمل..."}</div>}
+            {busy && (
+              <div className="ai-activity" role="status" aria-live="polite">
+                <div className="ai-activity-title"><LoaderCircle size={17} className="spinning"/> <strong>{progress || "جارٍ تجهيز طلبك..."}</strong></div>
+                {buildLog.length > 0 && (
+                  <div className="ai-activity-steps">
+                    {buildLog.map((item) => (
+                      <div key={item.stage} className={buildStage === item.stage ? "activity-step current" : "activity-step"}>
+                        {buildStage === item.stage ? <LoaderCircle size={13} className="spinning"/> : <Check size={13}/>}
+                        <span>{item.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {error && <div className="ai-error"><CircleAlert size={16}/>{error}</div>}
           <div className="ai-compose">
@@ -297,7 +395,7 @@ export default function BrowserBuilder({ user }) {
             <div><strong><Eye size={17}/> معاينة الموقع</strong><small>{files ? "معاينة الموقع النهائي" : "لم يتم إنشاء موقع بعد"}</small></div>
             {files && <div className="ai-preview-header-actions">
               {saved && <span className="ai-generated-badge"><Check size={13}/> محفوظ</span>}
-              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setProjectName("");}}>مشروع جديد</button>
+              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setProjectName("");setLastStoreRequest(false);}}>مشروع جديد</button>
             </div>}
           </div>
           {files ? (
@@ -307,6 +405,7 @@ export default function BrowserBuilder({ user }) {
                 <div className="publish-help">
                   <strong>الخطوة الأخيرة: الموافقة والنشر</strong>
                   <span>شاهد المعاينة أولاً، وبعد موافقتك ننشر الموقع برابط عام، وليس كملفات للتحميل.</span>
+                  {lastStoreRequest && <span className="shop-scope-note">تنبيه: المعاينة توضح تجربة متجر تجريبية. الدفع الحقيقي وإدارة الطلبات والمنتجات بأمان تحتاج ربط خادم وقاعدة بيانات وخدمة دفع.</span>}
                 </div>
                 <div className="publish-buttons">
                   <button type="button" className="ai-build-button" onClick={publishWebsite} disabled={!saved || busy || publishing}>
