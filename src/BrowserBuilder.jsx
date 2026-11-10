@@ -248,7 +248,7 @@ export default function BrowserBuilder({ user }) {
         </div>
         <div className="engine-indicator is-online">
           <span className="engine-indicator-dot" />
-          <span>فريق ذكاء اصطناعي متعدد</span>
+          <span>توجيه ذكي لمحركات الذكاء</span>
         </div>
       </header>
       <div className="ai-builder-grid">
