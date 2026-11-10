@@ -148,10 +148,17 @@ function deriveName(prompt,plan) {
 }
 function validateMarkup(raw) {
   const markup=extractMarkup(raw);
-  const opened=(markup.match(/<section\b/gi)||[]).length;
-  const closed=(markup.match(/<\/section\s*>/gi)||[]).length;
-  if(markup.length<850||opened<4||closed<opened||!/<header\b|<nav\b/i.test(markup)||!/<footer\b/i.test(markup)) {
-    throw new RequestError("التصميم لم يكتمل بعد. جارٍ إصلاح الأقسام تلقائياً.",502);
+  const structure=markup.replace(/<!--[\s\S]*?-->/g,"");
+  const opened=(structure.match(/<section\b/gi)||[]).length;
+  const closed=(structure.match(/<\/section\s*>/gi)||[]).length;
+  const structuralTags=["header","nav","footer","section","div","article","form","ul","ol","li","button"];
+  const unbalanced=structuralTags.some((tag)=>{
+    const open=(structure.match(new RegExp("<"+tag+"\\b","gi"))||[]).length;
+    const close=(structure.match(new RegExp("<\\/"+tag+"\\s*>","gi"))||[]).length;
+    return open!==close;
+  });
+  if(markup.length<850||opened<5||closed!==opened||unbalanced||!/<header\b/i.test(structure)||!/<nav\b/i.test(structure)||!/<footer\b/i.test(structure)) {
+    throw new RequestError("التصميم لم يكتمل بعد. جارٍ إصلاح بنية HTML والأقسام تلقائياً.",502);
   }
   return markup;
 }
