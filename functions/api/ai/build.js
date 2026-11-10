@@ -270,7 +270,7 @@ export async function createWebsite(env,body,notify) {
   ];
   notify("styling","مصمم الواجهة يبتكر الألوان والتخطيط المتجاوب...");
   notify("interactions","مهندس التفاعلات يبني وظائف الموقع بالتوازي...");
-  const [cssResult,jsOutcome]=await Promise.all([
+  let [cssResult,jsOutcome]=await Promise.all([
     callStage(env,"css",cssMessages,5000),
     callStage(env,"js",jsMessages,1700).then((value)=>({value})).catch((error)=>({error}))
   ]);

@@ -119,7 +119,8 @@ export default function BrowserBuilder({ user }) {
       setSaved(true);
       setNotice(publishedId ? "تم حفظ تعديلك كمسودة. الرابط العام ما زال يعرض النسخة المنشورة السابقة حتى تضغط «تحديث الموقع المنشور»." : "تم حفظ ملفات الموقع في Firestore. الموقع خاص حتى توافق على نشره.");
     } catch {
-      setNotice("المعاينة جاهزة، لكن تعذّر حفظ المشروع في قاعدة البيانات. تحقق من إعدادات Firestore.");
+      console.error("Project save failed:", err);
+      setNotice("المعاينة جاهزة، لكن تعذّر حفظ المشروع (" + (err?.code || err?.message || "خطأ غير معروف") + "). تحقق من نشر قواعد Firestore.");
       return false;
     }
     return true;
@@ -250,7 +251,7 @@ export default function BrowserBuilder({ user }) {
         </div>
         <div className="engine-indicator is-online">
           <span className="engine-indicator-dot" />
-          <span>ذكاء سحابي جاهز</span>
+          <span>فريق ذكاء اصطناعي متعدد</span>
         </div>
       </header>
       <div className="ai-builder-grid">
@@ -258,12 +259,12 @@ export default function BrowserBuilder({ user }) {
           <div className="ai-panel-header">
             <div className="ai-panel-title">
               <div className="ai-panel-icon"><Bot size={19}/></div>
-              <div><strong>مساعد التصميم والبرمجة</strong><small>لا تحتاج إلى مفتاح API خاص بك</small></div>
+              <div><strong>مساعد التصميم والبرمجة</strong><small>محركات مجانية تُختار تلقائياً من الخادم</small></div>
             </div>
             <span className="ai-auto-badge">اختيار النموذج تلقائياً</span>
           </div>
           <div className="browser-mode-note">
-            تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
+            يختار النظام تلقائياً بين Gemini وGroq وOpenRouter وCloudflare حسب المحركات المجانية المربوطة على الخادم. تعمل أدوار التخطيط والبرمجة والتصميم والتفاعلات معاً، وتبقى مفاتيح API مخفية عن المتصفح.
           </div>
           <div className="ai-message-list">
             {messages.map((message, i) => (
