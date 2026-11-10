@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createWebsite, splitHtml } from "../functions/api/ai/build.js";
-import { AI_MODELS, selectAIModel, runTextModel } from "../functions/_shared/models.js";
+import { AI_MODELS, selectAIModel, runTextModel, runRoutedTextModel, getConfiguredAIProviders, hasAIProvider } from "../functions/_shared/models.js";
 import "../functions/api/ai/chat.js";
 
 const markup = [
@@ -84,21 +85,66 @@ test("repairs an incomplete HTML fragment automatically",async()=>{
   assert.equal(ai.generation.html,2);
   assert.match(result.files["index.html"],/<\/html>/);
 });
-test("uses coding fallback if the selected model is unavailable",async()=>{
-  const ai={
-    generation:{html:0,css:0,js:0},
-    async run(model,params) {
-      const system=params.messages[0].content;
-      if(system.includes("creative director"))return {response:plan};
-      if(model===AI_MODELS["qwen-3.8"].id)throw new Error("Unavailable");
-      if(system.includes("HTML engineer")){this.generation.html++;return {response:markup};}
-      if(system.includes("CSS engineer")){this.generation.css++;return {response:css};}
-      if(system.includes("JavaScript engineer")){this.generation.js++;return {response:js};}
-      return {response:"ok"};
+test("falls back from a rate-limited Groq coding model to Cloudflare Workers AI",async()=>{
+  const ai=fakeAI({});
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async(url)=>{
+    if(String(url).includes("api.groq.com")) {
+      return new Response(JSON.stringify({error:{message:"rate limit exceeded"}}),{status:429,headers:{"Content-Type":"application/json"}});
     }
+    throw new Error("Unexpected external provider request: "+url);
   };
-  const result=await createWebsite(ai,{prompt:"موقع لشركة تقنية",model:"qwen-3.8",style:"auto"},()=>{});
-  assert.equal(result.model,AI_MODELS["qwen-coder"].id);
+  try {
+    const result=await createWebsite({AI:ai,GROQ_API_KEY:"test-groq-key"},{prompt:"موقع لشركة تقنية",style:"auto"},()=>{});
+    const htmlAgent=result.providers.find((item)=>item.role==="بناء الواجهة");
+    assert.equal(htmlAgent.label,"Cloudflare Qwen Coder");
+    assert.ok(result.model.includes("Cloudflare Qwen Coder"));
+  } finally {
+    globalThis.fetch=originalFetch;
+  }
+});
+
+test("routes tasks to free providers when server-side keys are present",async()=>{
+  const originalFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async(url,options)=>{
+    calls.push({url:String(url),body:JSON.parse(options.body)});
+    return new Response(JSON.stringify({
+      candidates:[{content:{parts:[{text:"خطة جاهزة"}]}}]
+    }),{status:200,headers:{"Content-Type":"application/json"}});
+  };
+  try {
+    const result=await runRoutedTextModel({GEMINI_API_KEY:"test-key"},"plan",[
+      {role:"system",content:"plan"},
+      {role:"user",content:"create a plan"}
+    ],1200);
+    assert.equal(result.provider,"gemini");
+    assert.equal(result.model,"gemini-3.8-flash");
+    assert.ok(calls[0].url.includes("gemini-3.8-flash:generateContent"));
+  } finally {
+    globalThis.fetch=originalFetch;
+  }
+});
+
+test("reports only configured provider names, never secrets",()=>{
+  const env={GEMINI_API_KEY:"secret-a",GROQ_API_KEY:"secret-b",OPENROUTER_API_KEY:"secret-c",AI:{run(){}}};
+  assert.equal(hasAIProvider(env),true);
+  assert.deepEqual(getConfiguredAIProviders(env),["Google Gemini","Groq","OpenRouter","Cloudflare Workers AI"]);
+  assert.doesNotMatch(getConfiguredAIProviders(env).join(" "),/secret-/);
+});
+
+test("Qwen Coder receives its supported max_tokens parameter",async()=>{
+  let received;
+  const ai={async run(model,params){received={model,params};return {response:"code"};}};
+  await runTextModel(ai,AI_MODELS["qwen-coder"],[{role:"user",content:"write code"}],2000);
+  assert.equal(received.params.max_tokens,2000);
+  assert.equal("max_completion_tokens" in received.params,false);
+});
+
+test("Firestore project rules permit the designStyle field sent by the builder",()=>{
+  const rules=readFileSync(new URL("../firestore.rules",import.meta.url),"utf8");
+  assert.match(rules,/generatedFiles', 'aiModel', 'designStyle', 'publishedSiteId'/);
+  assert.match(rules,/request\.resource\.data\.designStyle is string/);
 });
 test("rejects unsafe custom JavaScript and retains safe local interactions",async()=>{
   const ai=fakeAI({js:()=>'fetch("https://example.com")'});
