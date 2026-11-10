@@ -59,7 +59,6 @@ export default function BrowserBuilder({ user }) {
     content: "أهلاً بك في ZYQMORA AI. اكتب وصف الموقع الذي تريده فقط، وسأبتكر الاسم والهوية والتصميم وأبني الموقع لتعاينه قبل نشره. لا تحتاج إلى أي إعدادات تقنية."
   }]);
   const [input, setInput] = useState("");
-  const designStyle = "auto";
   const selectedModel = "gemma-4";
   const [buildStage, setBuildStage] = useState("");
   const [buildLog, setBuildLog] = useState([]);
@@ -87,7 +86,7 @@ export default function BrowserBuilder({ user }) {
 
   const preview = useMemo(() => renderSiteDocument(files), [files]);
 
-  async function saveFiles(result, prompt, style) {
+  async function saveFiles(result, prompt) {
     setSaved(false);
     try {
       if (projectId) {
@@ -96,7 +95,6 @@ export default function BrowserBuilder({ user }) {
           prompt: prompt.slice(0, 6000),
           generatedFiles: result.files,
           aiModel: result.model,
-          designStyle: style,
           updatedAt: serverTimestamp()
         });
       } else {
@@ -109,7 +107,6 @@ export default function BrowserBuilder({ user }) {
           visibility: "private",
           generatedFiles: result.files,
           aiModel: result.model,
-          designStyle: style,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -152,7 +149,7 @@ export default function BrowserBuilder({ user }) {
         { role: "assistant", content: result.summary }
       ]);
       reportBuildStage("saving", "جارٍ حفظ الموقع في مشاريعك...");
-      const wasSaved = await saveFiles(result, prompt, designStyle);
+      const wasSaved = await saveFiles(result, prompt);
       reportBuildStage(wasSaved ? "complete" : "preview", wasSaved ? "اكتمل الموقع وحُفظت ملفات المشروع." : "المعاينة جاهزة، لكن تعذّر حفظ المشروع. يمكنك إعادة المحاولة.");
     } catch (err) {
       setError(err?.message || "حدث خطأ. حاول مجدداً.");
