@@ -242,8 +242,9 @@ export async function createWebsite(env,body,notify) {
       const repairedPlan=planJson(retry.text);
       if(repairedPlan){plan= repairedPlan;planResult=retry;}
     }
-    if(!plan)console.warn("Design planner returned invalid JSON; the coding agents will infer the design from the prompt.");
-  }catch(error){console.warn("Optional design planning unavailable; continuing with prompt.",error?.message);}
+    if(plan)notify("planning","تم إعداد الهوية وخريطة الموقع عبر "+planResult.label+".");
+    else {planResult=null;console.warn("Design planner returned invalid JSON; the coding agents will infer the design from the prompt.");}
+  }catch(error){planResult=null;console.warn("Optional design planning unavailable; continuing with prompt.",error?.message);}
 
   const context=makeContext(body.prompt,style,plan,existing);
   notify("building","مهندس الواجهة يبني بنية الموقع وأقسامه...");
@@ -252,6 +253,7 @@ export async function createWebsite(env,body,notify) {
     {role:"user",content:context+"\n\nCreate the complete body fragment now. Include at least five detailed section elements, distinct layouts and specific copy. Keep the result complete and concise enough to close every tag."}
   ];
   let htmlResult=await callStage(env,"html",htmlMessages,6200);
+  notify("building","مهندس الواجهة عبر "+htmlResult.label+" يبني أقسام الموقع.");
   let markup;
   try {
     markup=validateMarkup(htmlResult.text);
@@ -292,6 +294,7 @@ export async function createWebsite(env,body,notify) {
     css=extractCss(retry.text);
   }
   if(!validCss(css))throw new RequestError("لم يكتمل ملف التصميم CSS حتى بعد محاولة الإصلاح. لم نحفظ موقعاً ناقصاً؛ أعد المحاولة لاحقاً.",502);
+  notify("styling","اكتمل التصميم البصري عبر "+cssResult.label+".");
 
   let js="";
   let jsResult=null;
@@ -299,6 +302,7 @@ export async function createWebsite(env,body,notify) {
     jsResult=jsOutcome.value;
     const candidate=extractJs(jsResult.text);
     js=safeJs(candidate)?candidate:"";
+    notify("interactions","اكتملت التفاعلات عبر "+jsResult.label+".");
   } else {
     console.warn("Custom interactions unavailable; built-in local interactions will be used.",jsOutcome.error?.message);
   }
