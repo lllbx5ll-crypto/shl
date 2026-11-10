@@ -1,6 +1,7 @@
 import { enforceUserRateLimit, jsonError, requireFirebaseUser, RequestError } from "../../_shared/auth.js";
+import { selectAIModel, runTextModel } from "../../_shared/models.js";
 
-const MODEL = "@cf/qwen/qwen2.5-coder-32b-instruct";
+
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -27,28 +28,19 @@ export async function onRequestPost({ request, env }) {
       return { role: item.role, content: item.content };
     });
 
-    const result = await env.AI.run(MODEL, {
-      messages: [
-        {
-          role: "system",
-          content: [
-            "أنت ZYQMORA AI، مساعد عربي متخصص في البرمجة وتصميم المواقع وتجربة المستخدم.",
-            "أجب باللغة العربية ما لم يطلب المستخدم لغة أخرى. قدّم حلولاً عملية وكوداً صحيحاً عند الحاجة.",
-            "كن واضحاً ولا تدّع تنفيذ أو نشر شيء لم تنفذه فعلياً.",
-            "عند طلب إنشاء موقع كامل، وجّه المستخدم إلى زر إنشاء الموقع في مساحة البناء."
-          ].join("\n")
-        },
-        ...messages
-      ],
-      stream: false,
-      max_tokens: 1100,
-      temperature: 0.35
-    });
+    const selected = selectAIModel(body?.model);
+    const content = await runTextModel(env.AI, selected, [
+      { role: "system", content: [
+        "أنت ZYQMORA AI، مساعد عربي متخصص في البرمجة وتصميم المواقع وتجربة المستخدم.",
+        "أجب باللغة العربية ما لم يطلب المستخدم لغة أخرى. قدّم خطوات واقعية وكوداً صحيحاً.",
+        "لا تدّع تنفيذ شيء لم تنفذه؛ لا تعد بدفع أو متجر حقيقي دون خدمات خلفية آمنة.",
+        "عند طلب موقع جديد، وجّه المستخدم إلى زر «صمّم موقعي»."
+      ].join("\n") },
+      ...messages
+    ], 1500);
+    if (!content) throw new RequestError("لم يُرجع النموذج إجابة.", 502);
 
-    const content = typeof result?.response === "string" ? result.response.trim() : "";
-    if (!content) throw new RequestError("لم يُرجع النموذج إجابة. حاول مرة أخرى.", 502);
-
-    return Response.json({ content, model: MODEL }, {
+    return Response.json({ content, model: selected.id }, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
