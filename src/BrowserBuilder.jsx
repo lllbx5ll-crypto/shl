@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Palette, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
-import { buildFreeTemplate } from "./browserAI.js";
 import { renderSiteDocument } from "./sitePreview.js";
 import "./builder.css";
 
@@ -87,12 +86,11 @@ async function requestCloudBuild(user, payload, report) {
 export default function BrowserBuilder({ user }) {
   const [messages, setMessages] = useState([{
     role: "assistant",
-    content: "أهلاً بك في ZYQMORA AI. صف الموقع الذي تتخيله، واختر أسلوب التصميم، وسأجهّز لك موقعاً كاملاً لتعاينه قبل نشره. لا تحتاج إلى تنزيل نموذج على جهازك."
+    content: "أهلاً بك في ZYQMORA AI. اكتب وصف الموقع الذي تريده فقط، وسأبتكر الاسم والهوية والتصميم وأبني الموقع لتعاينه قبل نشره. لا تحتاج إلى أي إعدادات تقنية."
   }]);
   const [input, setInput] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [designStyle, setDesignStyle] = useState("premium");
-  const [selectedModel, setSelectedModel] = useState("gemma-4");
+  const [designStyle] = useState("auto");
+  const [selectedModel] = useState("gemma-4");
   const [buildStage, setBuildStage] = useState("");
   const [buildLog, setBuildLog] = useState([]);
   const [files, setFiles] = useState(null);
@@ -105,13 +103,8 @@ export default function BrowserBuilder({ user }) {
   const [saved, setSaved] = useState(false);
   const [publishedId, setPublishedId] = useState("");
   const [lastStoreRequest, setLastStoreRequest] = useState(false);
+  const [siteName, setSiteName] = useState("");
   const [publishing, setPublishing] = useState(false);
-
-  const modelOptions = [
-    { id: "gemma-4", label: "Gemma 4 • تصميم" },
-    { id: "qwen-coder", label: "Qwen Coder • برمجة" },
-    { id: "qwen-3.8", label: "Qwen 3.8 • تفكير" }
-  ];
 
   function reportBuildStage(stage, message) {
     setBuildStage(stage);
@@ -129,6 +122,7 @@ export default function BrowserBuilder({ user }) {
     try {
       if (projectId) {
         await updateDoc(doc(db, "projects", projectId), {
+          name: (result.siteName || prompt.slice(0, 55) || "موقع جديد").slice(0, 80),
           prompt: prompt.slice(0, 6000),
           generatedFiles: result.files,
           aiModel: result.model,
@@ -138,7 +132,7 @@ export default function BrowserBuilder({ user }) {
       } else {
         const reference = await addDoc(collection(db, "projects"), {
           ownerUid: user.uid,
-          name: (projectName.trim() || prompt.slice(0, 55) || "موقع جديد").slice(0, 80),
+          name: (result.siteName || prompt.slice(0, 55) || "موقع جديد").slice(0, 80),
           prompt: prompt.slice(0, 6000),
           status: "draft",
           framework: "html",
@@ -151,6 +145,7 @@ export default function BrowserBuilder({ user }) {
         });
         setProjectId(reference.id);
       }
+      setSiteName(result.siteName || prompt.slice(0,55));
       setSaved(true);
       setNotice(publishedId ? "تم حفظ تعديلك كمسودة. الرابط العام ما زال يعرض النسخة المنشورة السابقة حتى تضغط «تحديث الموقع المنشور»." : "تم حفظ ملفات الموقع في Firestore. الموقع خاص حتى توافق على نشره.");
     } catch {
@@ -169,19 +164,14 @@ export default function BrowserBuilder({ user }) {
     setBusy(true);
 
     try {
-      let result;
-      if (type === "template") {
-        reportBuildStage("building", "جارٍ إعداد القالب المتجاوب والألوان...");
-        result = buildFreeTemplate(prompt, designStyle);
-      } else {
-        result = await requestCloudBuild(user, {
-          prompt,
-          style: designStyle,
-          model: selectedModel,
-          existingFiles: files || undefined
-        }, reportBuildStage);
-      }
+      const result = await requestCloudBuild(user, {
+        prompt,
+        style: "auto",
+        model: selectedModel,
+        existingFiles: files || undefined
+      }, reportBuildStage);
       setFiles(result.files);
+      setSiteName(result.siteName || prompt.slice(0,55));
       setLastStoreRequest(/متجر|شراء|سلة|منتج|shop|store|checkout|ecommerce/i.test(prompt));
       setInput("");
       setMessages((current) => [...current,
@@ -247,7 +237,7 @@ export default function BrowserBuilder({ user }) {
       const publishedSite = {
         ownerUid: user.uid,
         projectId,
-        name: (projectName.trim() || "موقع من ZYQMORA").slice(0, 80),
+        name: (siteName || "موقع من ZYQMORA").slice(0, 80),
         status: "published",
         files,
         updatedAt: serverTimestamp(),
@@ -311,8 +301,8 @@ export default function BrowserBuilder({ user }) {
       <header className="ai-builder-heading">
         <div>
           <div className="eyebrow"><Sparkles size={15} /> صمّم موقعك في دقائق</div>
-          <h1>حوّل فكرتك إلى موقع احترافي</h1>
-          <p>اكتب فكرتك، اختر الهوية البصرية، وشاهد موقعك مباشرة قبل نشره.</p>
+          <h1>اكتب وصفك، واستلم موقعك</h1>
+          <p>لا تحتاج إلى اسم مشروع أو إعدادات. اشرح فكرتك فقط ودع الذكاء الاصطناعي يبني الموقع.</p>
         </div>
         <div className="engine-indicator is-online">
           <span className="engine-indicator-dot" />
@@ -326,29 +316,10 @@ export default function BrowserBuilder({ user }) {
               <div className="ai-panel-icon"><Bot size={19}/></div>
               <div><strong>مساعد التصميم والبرمجة</strong><small>لا تحتاج إلى مفتاح API خاص بك</small></div>
             </div>
-            <label className="cloud-model-picker">
-              <Cpu size={16}/>
-              <span className="sr-only">نموذج الذكاء الاصطناعي</span>
-              <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)} disabled={busy} aria-label="اختر نموذج الذكاء الاصطناعي">
-                {modelOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-              </select>
-            </label>
+            <span className="ai-auto-badge">اختيار النموذج تلقائياً</span>
           </div>
           <div className="browser-mode-note">
             تتم المعالجة على خوادم Cloudflare؛ لا يتم تنزيل نموذج على جوالك أو حاسوبك. الاستخدام المجاني يخضع لحصة يومية مشتركة لحساب Cloudflare.
-          </div>
-          <div className="style-selector">
-            <div className="style-selector-heading">
-              <span><Palette size={15} /> اتجاه التصميم</span>
-              <small>يمكنك تغييره لكل مشروع</small>
-            </div>
-            <div className="style-options">
-              {designStyles.map((style) => (
-                <button key={style.id} type="button" className={designStyle === style.id ? "style-chip selected" : "style-chip"} aria-pressed={designStyle === style.id} onClick={() => setDesignStyle(style.id)} disabled={busy}>
-                  {style.label}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="ai-message-list">
             {messages.map((message, i) => (
@@ -378,14 +349,11 @@ export default function BrowserBuilder({ user }) {
           </div>
           {error && <div className="ai-error"><CircleAlert size={16}/>{error}</div>}
           <div className="ai-compose">
-            <input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="اسم المشروع (اختياري)" maxLength={80}/>
-            <textarea rows={4} maxLength={6000} value={input} onChange={(event) => setInput(event.target.value)} placeholder="مثلاً: أنشئ موقع متجر إلكتروني فاخر بالألوان البنفسجية..."/>
+            <textarea rows={4} maxLength={6000} value={input} onChange={(event) => setInput(event.target.value)} placeholder="صف موقعك بالتفصيل: نوع النشاط، الصفحات، الألوان، الأقسام، المنتجات والوظائف التي تريدها. لا تحتاج إلى كتابة اسم للمشروع..."/>
             <div className="ai-compose-actions">
               <span>{input.length}/6000</span>
               <div>
-                <button type="button" className="ai-send-button" onClick={sendChat} disabled={busy || !input.trim()}><Send size={15}/> اسأل المساعد</button>
                 <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim()}><WandSparkles size={15}/> صمّم موقعي</button>
-                <button type="button" className="ai-send-button" onClick={() => generate("template")} disabled={busy || !input.trim()}><Code2 size={15}/> قالب مجاني سريع</button>
               </div>
             </div>
           </div>
@@ -396,7 +364,7 @@ export default function BrowserBuilder({ user }) {
             <div><strong><Eye size={17}/> معاينة الموقع</strong><small>{files ? "معاينة الموقع النهائي" : "لم يتم إنشاء موقع بعد"}</small></div>
             {files && <div className="ai-preview-header-actions">
               {saved && <span className="ai-generated-badge"><Check size={13}/> محفوظ</span>}
-              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setProjectName("");setLastStoreRequest(false);}}>مشروع جديد</button>
+              <button type="button" onClick={() => {setFiles(null);setProjectId("");setPublishedId("");setSaved(false);setNotice("");setSiteName("");setLastStoreRequest(false);}}>مشروع جديد</button>
             </div>}
           </div>
           {files ? (

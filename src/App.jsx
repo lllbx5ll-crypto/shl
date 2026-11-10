@@ -88,7 +88,6 @@ function App() {
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
-  const [projectName, setProjectName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -224,7 +223,7 @@ function App() {
     }
     setSaving(true);
     setNotice("");
-    const cleanName = projectName.trim() || cleanPrompt.split(/\s+/).slice(0, 6).join(" ");
+    const cleanName = cleanPrompt.replace(/^(أريد|اريد|أنشئ|انشئ|صمم|صمّم|موقع|صفحة)\s*/,"").slice(0,55).trim() || "موقع جديد";
     try {
       await addDoc(collection(db, "projects"), {
         ownerUid: user.uid,
@@ -236,7 +235,6 @@ function App() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      setProjectName("");
       setPrompt("");
       setActiveTab("projects");
       setNotice("تم حفظ وصف المشروع. افتح قسم «إنشاء» ليبني لك الموقع ويعرضه قبل النشر.");
@@ -335,11 +333,9 @@ function App() {
               <section className="builder-card">
                 <div className="section-heading">
                   <div className="section-icon"><WandSparkles size={20} /></div>
-                  <div><h2>ابدأ مشروعاً جديداً</h2><p>اكتب وصف الموقع الذي تريد بناءه.</p></div>
+                  <div><h2>اكتب وصف الموقع فقط</h2><p>سيُنشأ الاسم والهوية تلقائياً من وصفك.</p></div>
                 </div>
                 <form onSubmit={createProject}>
-                  <label htmlFor="project-name">اسم المشروع <span>اختياري</span></label>
-                  <input id="project-name" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="مثلاً: متجر القميشي الإلكتروني" maxLength={80} />
                   <label htmlFor="project-prompt">صف فكرتك</label>
                   <textarea id="project-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="مثلاً: أريد موقعاً احترافياً لشركة تقنية، يحتوي على صفحة رئيسية وخدمات ومعرض أعمال ونموذج تواصل..." rows={5} maxLength={6000} />
                   <div className="form-bottom"><span>{prompt.length}/6000 حرف</span><button className="primary-button" type="submit" disabled={saving || !prompt.trim()}><Plus size={18} />{saving ? "جارٍ الحفظ..." : "حفظ المشروع"}</button></div>
