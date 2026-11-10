@@ -110,7 +110,6 @@ async function callGemini(env, messages, maxTokens) {
   const body = {
     contents,
     generationConfig: {
-      temperature: 0.35,
       maxOutputTokens: maxTokens || 5000
     }
   };
