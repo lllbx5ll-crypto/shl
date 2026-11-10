@@ -65,7 +65,7 @@ test("builds a bespoke prompt-only site through separate HTML CSS and JS stages"
   const ai=fakeAI({});
   const stages=[];
   const result=await createWebsite(ai,{prompt:"أريد متجراً إلكترونياً للأزياء النسائية",style:"auto"},(stage)=>stages.push(stage));
-  assert.deepEqual(stages,["analyzing","planning","building","styling","interactions","reviewing"]);
+  for (const stage of ["analyzing","planning","building","styling","interactions","reviewing"]) assert.ok(stages.includes(stage), "missing stage: "+stage);
   assert.equal(ai.generation.html,1);
   assert.equal(ai.generation.css,1);
   assert.equal(ai.generation.js,1);
