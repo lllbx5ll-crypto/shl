@@ -29,7 +29,7 @@ function planJson(raw) {
     };
   } catch {return null;}
 }
-function splitHtml(raw) {
+export function splitHtml(raw) {
   let html=String(raw||"").trim().replace(/^\x60{3}(?:html)?\s*/i,"").replace(/\s*\x60{3}\s*$/,"");
   const at=html.search(/<!doctype\s+html|<html[\s>]/i);
   if(at>=0) html=html.slice(at);
@@ -69,7 +69,7 @@ function contextFromFiles(existing) {
     "script.js":typeof existing["script.js"]==="string"?existing["script.js"].slice(0,2500):""
   });
 }
-async function createWebsite(ai,body,notify) {
+export async function createWebsite(ai,body,notify) {
   const chosen=selectAIModel(body.model);
   const existing=contextFromFiles(body.existingFiles);
   notify("analyzing","جارٍ فهم الفكرة والوظائف التي طلبتها...");

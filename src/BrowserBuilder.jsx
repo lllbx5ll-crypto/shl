@@ -200,6 +200,7 @@ export default function BrowserBuilder({ user }) {
   }
 
   async function sendChat() {
+    setBuildLog([]);
     const text = input.trim();
     if (!text || busy) return;
     const next = [...messages, { role: "user", content: text }];
