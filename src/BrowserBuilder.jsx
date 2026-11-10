@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { Bot, Check, CircleAlert, Code2, Cpu, Eye, Link as LinkIcon, LoaderCircle, Palette, Send, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
+import { Bot, Check, CircleAlert, Code2, Eye, Link as LinkIcon, LoaderCircle, Sparkles, WandSparkles, Globe2, Trash2 } from "lucide-react";
 import { db } from "./firebase.js";
 import { renderSiteDocument } from "./sitePreview.js";
 import "./builder.css";
@@ -89,8 +89,8 @@ export default function BrowserBuilder({ user }) {
     content: "أهلاً بك في ZYQMORA AI. اكتب وصف الموقع الذي تريده فقط، وسأبتكر الاسم والهوية والتصميم وأبني الموقع لتعاينه قبل نشره. لا تحتاج إلى أي إعدادات تقنية."
   }]);
   const [input, setInput] = useState("");
-  const [designStyle] = useState("auto");
-  const [selectedModel] = useState("gemma-4");
+  const designStyle = "auto";
+  const selectedModel = "gemma-4";
   const [buildStage, setBuildStage] = useState("");
   const [buildLog, setBuildLog] = useState([]);
   const [files, setFiles] = useState(null);
@@ -149,11 +149,13 @@ export default function BrowserBuilder({ user }) {
       setSaved(true);
       setNotice(publishedId ? "تم حفظ تعديلك كمسودة. الرابط العام ما زال يعرض النسخة المنشورة السابقة حتى تضغط «تحديث الموقع المنشور»." : "تم حفظ ملفات الموقع في Firestore. الموقع خاص حتى توافق على نشره.");
     } catch {
-      setNotice("المعاينة جاهزة، لكن تعذّر الحفظ في Firestore. تحقق من القواعد المنشورة.");
+      setNotice("المعاينة جاهزة، لكن تعذّر حفظ المشروع في قاعدة البيانات. تحقق من إعدادات Firestore.");
+      return false;
     }
+    return true;
   }
 
-  async function generate(type) {
+  async function generate() {
     const prompt = input.trim();
     if (!prompt || busy) return;
     setError("");
@@ -179,8 +181,8 @@ export default function BrowserBuilder({ user }) {
         { role: "assistant", content: result.summary }
       ]);
       reportBuildStage("saving", "جارٍ حفظ الموقع في مشاريعك...");
-      await saveFiles(result, prompt, designStyle);
-      reportBuildStage("complete", "اكتملت المعاينة وجاهزة للمراجعة.");
+      const wasSaved = await saveFiles(result, prompt, designStyle);
+      reportBuildStage(wasSaved ? "complete" : "preview", wasSaved ? "اكتمل الموقع وحُفظت ملفات المشروع." : "المعاينة جاهزة، لكن تعذّر حفظ المشروع. يمكنك إعادة المحاولة.");
     } catch (err) {
       setError(err?.message || "حدث خطأ. حاول مجدداً.");
     } finally {
@@ -353,7 +355,7 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-compose-actions">
               <span>{input.length}/6000</span>
               <div>
-                <button type="button" className="ai-build-button" onClick={() => generate("ai")} disabled={busy || !input.trim()}><WandSparkles size={15}/> صمّم موقعي</button>
+                <button type="button" className="ai-build-button" onClick={generate} disabled={busy || !input.trim()}><WandSparkles size={15}/> صمّم موقعي</button>
               </div>
             </div>
           </div>

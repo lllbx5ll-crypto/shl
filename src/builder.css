@@ -153,3 +153,9 @@
 .activity-step.current svg{color:#7659d8}
 .shop-scope-note{color:#946718!important;font-weight:600;padding:8px 10px;border:1px solid #f2e5bf;border-radius:9px;background:#fffaf0}
 @media(max-width:640px){.cloud-model-picker{width:100%;justify-content:space-between}.cloud-model-picker select{max-width:calc(100% - 30px);width:100%;font-size:12px}}
+
+.ai-auto-badge{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #e3dcf7;border-radius:999px;background:#f8f6ff;color:#7055bf;font-size:11px;font-weight:700;white-space:nowrap}
+.ai-compose textarea{min-height:150px}
+.ai-compose-actions{align-items:center}
+.ai-compose-actions>div{width:100%;display:flex;justify-content:flex-end}
+.ai-build-button{min-width:min(100%,260px)}
