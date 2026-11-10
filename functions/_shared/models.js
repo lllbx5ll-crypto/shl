@@ -40,7 +40,7 @@ const CLOUD_MODEL_BY_TASK = Object.freeze({
 });
 
 const OPENROUTER_MODEL_BY_TASK = Object.freeze({
-  plan: "nvidia/nemotron-3-ultra:free",
+  plan: "nvidia/nemotron-3-ultra-550b-a55b:free",
   html: "cohere/north-mini-code:free",
   css: "google/gemma-4-26b-a4b-it:free",
   js: "cohere/north-mini-code:free",
