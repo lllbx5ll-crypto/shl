@@ -118,7 +118,7 @@ export default function BrowserBuilder({ user }) {
       setSiteName(result.siteName || prompt.slice(0,55));
       setSaved(true);
       setNotice(publishedId ? "تم حفظ تعديلك كمسودة. الرابط العام ما زال يعرض النسخة المنشورة السابقة حتى تضغط «تحديث الموقع المنشور»." : "تم حفظ ملفات الموقع في Firestore. الموقع خاص حتى توافق على نشره.");
-    } catch {
+    } catch (err) {
       console.error("Project save failed:", err);
       setNotice("المعاينة جاهزة، لكن تعذّر حفظ المشروع (" + (err?.code || err?.message || "خطأ غير معروف") + "). تحقق من نشر قواعد Firestore.");
       return false;
@@ -339,14 +339,14 @@ export default function BrowserBuilder({ user }) {
             <div className="ai-preview-empty">
               <div className="ai-preview-empty-icon"><Code2 size={31}/></div>
               <strong>مساحة موقعك الجديد</strong>
-              <p>اكتب وصفاً واضحاً واختر النمط، ثم اضغط «صمّم موقعي». ستظهر المعاينة هنا دون تنزيل نموذج على جهازك.</p>
+              <p>اكتب وصف موقعك فقط، ثم اضغط «صمّم موقعي». ستظهر المعاينة هنا دون تنزيل نموذج على جهازك.</p>
             </div>
           )}
         </section>
       </div>
       <div className="ai-builder-footnote">
         <CircleAlert size={15}/>
-        <span>المستخدم يعاين الموقع أولاً ثم يوافق على نشره برابط عام. الذكاء يعمل على خوادم Cloudflare ولا ينزّل نموذجاً إلى جهاز الزائر. الحصة المجانية اليومية محدودة وقد تتوقف الطلبات عند بلوغها. روابط النشر تحتاج قواعد Firestore المحدثة.</span>
+        <span>المستخدم يعاين الموقع أولاً ثم يوافق على نشره برابط عام. تتعاون محركات الذكاء المتاحة على الخادم، وتبقى مفاتيحها خارج المتصفح. الحصص المجانية محدودة حسب المزود. يتطلب الحفظ نشر قواعد Firestore المحدثة.</span>
       </div>
     </section>
   );
