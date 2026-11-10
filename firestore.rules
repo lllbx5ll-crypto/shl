@@ -58,7 +58,6 @@ service cloud.firestore {
               && request.resource.data.publishedSiteId == request.auth.uid + '_' + projectId))
         && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
         && (!('designStyle' in request.resource.data) || (request.resource.data.designStyle is string && request.resource.data.designStyle.size() <= 40))
-        && (!('designStyle' in request.resource.data) || (request.resource.data.designStyle is string && request.resource.data.designStyle.size() <= 40))
         && (!('generatedFiles' in request.resource.data) || (
           request.resource.data.generatedFiles is map
           && request.resource.data.generatedFiles.keys().hasAll(['index.html', 'styles.css', 'script.js'])
@@ -87,6 +86,7 @@ service cloud.firestore {
             || (request.resource.data.publishedSiteId is string
               && request.resource.data.publishedSiteId == request.auth.uid + '_' + projectId))
         && (!('aiModel' in request.resource.data) || (request.resource.data.aiModel is string && request.resource.data.aiModel.size() <= 120))
+        && (!('designStyle' in request.resource.data) || (request.resource.data.designStyle is string && request.resource.data.designStyle.size() <= 40))
         && (!('generatedFiles' in request.resource.data) || (
           request.resource.data.generatedFiles is map
           && request.resource.data.generatedFiles.keys().hasAll(['index.html', 'styles.css', 'script.js'])

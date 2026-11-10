@@ -12,7 +12,7 @@
 
 ## إضافة مفاتيح API المجانية
 
-من لوحة Cloudflare افتح Pages ثم مشروع zyqmora-ai ثم **Settings → Variables and Secrets**. أضف المفاتيح التالية كـ **Secrets / Encrypted** في بيئتي Production وPreview:
+**أقل إعداد يكفي للتشغيل:** مفتاح OpenRouter واحد. من لوحة Cloudflare افتح Pages ثم مشروع zyqmora-ai ثم **Settings → Variables and Secrets** وأضف OPENROUTER_API_KEY كـ **Secret / Encrypted** في بيئتي Production وPreview. هذا المفتاح الواحد يتيح للمخطط ومهندس الكود ومصمم CSS استخدام ثلاثة نماذج مجانية مختلفة. للحصول على تعاون بين مزودين مستقلين ومزيد من البدائل، أضف أيضاً المفاتيح الاختيارية التالية:
 
 | Secret | مكان إنشاء المفتاح |
 |---|---|
@@ -20,7 +20,7 @@
 | GROQ_API_KEY | https://console.groq.com/keys |
 | OPENROUTER_API_KEY | https://openrouter.ai/settings/keys |
 
-لا تضع المفاتيح داخل ملفات React أو GitHub أو في متصفح المستخدم. لا تحتاج إلى إضافة أي متغير إذا لم ترغب في تفعيل مزود بعينه؛ سيستخدم النظام المحركات التي تم ربطها فقط. احتفظ بربط Workers AI الموجود في wrangler.toml.
+لا تضع المفاتيح داخل ملفات React أو GitHub أو في متصفح المستخدم. OpenRouter وحده كافٍ كبداية؛ Gemini وGroq اختياريان لزيادة التنوع والقدرة الاحتياطية. سيستخدم النظام المحركات التي تم ربطها فقط. احتفظ بربط Workers AI الموجود في wrangler.toml.
 
 بعد إضافة أو تغيير Secrets أعد نشر Cloudflare Pages حتى تصل القيم إلى Functions.
 
