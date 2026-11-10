@@ -44,7 +44,7 @@ const OPENROUTER_MODEL_BY_TASK = Object.freeze({
   html: "cohere/north-mini-code:free",
   css: "google/gemma-4-26b-a4b-it:free",
   js: "cohere/north-mini-code:free",
-  review: "nvidia/nemotron-3-ultra:free"
+  review: "nvidia/nemotron-3-ultra-550b-a55b:free"
 });
 
 function normalizeEnvironment(value) {
